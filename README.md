@@ -1,2 +1,0 @@
-# Reconhecimento_fala
- 
