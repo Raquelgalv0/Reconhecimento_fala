@@ -272,6 +272,19 @@ input, textarea, select {
   margin-left: auto; width: auto; padding: 0 12px; gap: 6px; color: var(--accent);
   background: var(--accent-soft); font-weight: 600; font-size: 12.5px;
 }
+.editor-toolbar--insert {
+  border-radius: 0; border-top: none; top: 47px; gap: 8px;
+}
+.editor-toolbar--insert button {
+  width: auto; padding: 0 10px 0 8px; gap: 6px; font-size: 12px; font-weight: 600;
+}
+
+.page-style-btn {
+  margin-left: auto; display: flex; align-items: center; gap: 5px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 999px;
+  padding: 3px 10px 3px 8px; font-size: 11.5px; font-weight: 600; color: var(--ink-soft);
+}
+.page-style-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .title-input {
   width: 100%;
@@ -321,6 +334,128 @@ mark { background: #ffe28a; border-radius: 3px; padding: 0 2px; }
   border-radius: 3px;
   padding: 0 2px;
   cursor: pointer;
+}
+
+/* checklist */
+.checklist-item { display: flex; align-items: flex-start; gap: 9px; margin: 6px 0; }
+.checklist-item .check-box {
+  flex-shrink: 0; width: 18px; height: 18px; margin-top: 2px; border-radius: 5px;
+  border: 1.5px solid var(--border); cursor: pointer; position: relative;
+}
+.checklist-item .check-box:hover { border-color: var(--accent); }
+.checklist-item[data-checked="true"] .check-box {
+  background: var(--accent); border-color: var(--accent);
+}
+.checklist-item[data-checked="true"] .check-box::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 9px;
+  border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(40deg);
+}
+.checklist-item[data-checked="true"] .check-text { color: var(--ink-faint); text-decoration: line-through; }
+
+/* table */
+.editor-table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14.5px; }
+.editor-table td { border: 1px solid var(--border); padding: 8px 10px; min-width: 60px; }
+.editor-table tr:first-child td { background: var(--accent-soft); font-weight: 600; }
+
+/* code block */
+.code-block {
+  background: var(--ink); color: #e6e5f1; border-radius: 10px; padding: 14px 16px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13.5px;
+  line-height: 1.6; overflow-x: auto; margin: 14px 0; white-space: pre-wrap;
+}
+
+/* callout */
+.callout {
+  display: flex; gap: 10px; align-items: flex-start; margin: 14px 0;
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0; padding: 12px 14px; color: #423a80;
+}
+.callout .callout-icon { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+
+/* columns */
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 14px 0; }
+.columns .column { border-left: 1px dashed var(--border); padding-left: 16px; }
+.columns .column:first-child { border-left: none; padding-left: 0; }
+
+/* --- Page styles (visual templates, content is unaffected) --- */
+.page-style--a4 {
+  max-width: 760px; margin: 0 auto; padding-left: 60px; padding-right: 60px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.page-style--caderno {
+  background-color: #fffdf8;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 27px, #cfe0f5 27px 28px),
+    linear-gradient(to right, transparent 64px, #f3c1c9 64px 65px, transparent 65px);
+  padding-left: 78px;
+}
+.page-style--pautada {
+  background-color: #fffaf7;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 30px, #f7c6d9 30px 31px);
+}
+.page-style--pontilhada {
+  background-color: #fff;
+  background-image: radial-gradient(circle, #d9dbe9 1.1px, transparent 1.6px);
+  background-size: 22px 22px;
+}
+.page-style--pastel {
+  background: linear-gradient(160deg, #f5f1ff 0%, #fdf3fb 100%);
+}
+.page-style--pastel h2, .page-style--pastel h3 { color: #8a6fd8; }
+.page-style--medicina {
+  background: #fff; border-left: 4px solid #2f9ea3; padding-left: 32px;
+}
+.page-style--medicina h2, .page-style--medicina h3 { color: #1f7f84; }
+.page-style--concurso { background: #f7f7fb; }
+.page-style--concurso h2, .page-style--concurso h3 { border-bottom: 2px solid var(--ink); padding-bottom: 5px; display: inline-block; }
+.page-style--enem { background: #fffaf2; }
+.page-style--enem h2, .page-style--enem h3 { color: #c97a2b; }
+.page-style--fichamento { background: #fbf8f2; }
+.page-style--fichamento blockquote { font-family: var(--font-serif); font-size: 17px; }
+
+/* cornell layout (structural, not just skin) */
+.cornell-layout {
+  display: grid; grid-template-columns: 190px 1fr; grid-template-areas: "cue notes" "summary summary";
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 6px 0 16px;
+}
+.cornell-cue { grid-area: cue; background: var(--accent-soft); padding: 16px; border-right: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
+.cornell-notes { grid-area: notes; padding: 16px; border-bottom: 1px solid var(--border); min-height: 240px; }
+.cornell-summary { grid-area: summary; padding: 14px 16px; background: #faf9fc; font-size: 13.5px; }
+.cornell-layout p:last-child { margin-bottom: 0; }
+
+/* page-style picker modal */
+.style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.style-swatch {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 6px; font-size: 11.5px; color: var(--ink-soft);
+}
+.style-swatch:hover { border-color: var(--accent); }
+.style-swatch.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.style-preview { width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border); background: #fff; }
+.style-preview.page-style--a4 { box-shadow: inset 0 0 0 3px var(--border); }
+.style-preview.page-style--caderno {
+  background-color: #fffdf8;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 8px, #cfe0f5 8px 9px),
+    linear-gradient(to right, transparent 12px, #f3c1c9 12px 13px, transparent 13px);
+}
+.style-preview.page-style--pautada {
+  background-color: #fffaf7;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 8px, #f7c6d9 8px 9px);
+}
+.style-preview.page-style--pontilhada {
+  background-color: #fff;
+  background-image: radial-gradient(circle, #b7bad4 1.2px, transparent 1.8px);
+  background-size: 9px 9px;
+}
+.style-preview.page-style--pastel { background: linear-gradient(160deg, #e9e0ff 0%, #fbdff0 100%); }
+.style-preview.page-style--medicina { background: #e3f4f4; box-shadow: inset 4px 0 0 #2f9ea3; }
+.style-preview.page-style--concurso { background: #eceaf7; box-shadow: inset 0 -4px 0 var(--ink); }
+.style-preview.page-style--enem { background: linear-gradient(160deg, #ffedd2, #fff6e8); }
+.style-preview.page-style--fichamento { background: #f1e9d6; }
+.style-preview.page-style--cornell {
+  background: linear-gradient(to right, var(--accent-soft) 0 30%, #fff 30% 100%);
+  box-shadow: inset 0 -10px 0 -3px #faf9fc, inset 0 0 0 1px var(--border);
 }
 
 /* floating selection toolbar */

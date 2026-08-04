@@ -26,6 +26,20 @@ function escapeAttr(s) {
   return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
+const PAGE_STYLES = [
+  { id: "minimal", label: "Minimalista" },
+  { id: "a4", label: "Folha A4" },
+  { id: "caderno", label: "Caderno" },
+  { id: "pautada", label: "Pautada colorida" },
+  { id: "pontilhada", label: "Pontilhada" },
+  { id: "pastel", label: "Pastel" },
+  { id: "medicina", label: "Modo Medicina" },
+  { id: "concurso", label: "Modo Concurso" },
+  { id: "enem", label: "Modo ENEM" },
+  { id: "fichamento", label: "Fichamento" },
+  { id: "cornell", label: "Cornell" },
+];
+
 // ---------------------------------------------------------------- LIST ----
 function renderList(container, activeFolderId) {
   const folders = store.flattenFolders();
@@ -139,6 +153,9 @@ function renderEditor(container, summaryId) {
     <div class="folder-picker-inline">
       ${Icon("folder", { size: 13 })} Salvo em
       <select id="folder-select">${folderOptionsHtml(summary.folderId)}</select>
+      <button class="page-style-btn" id="page-style-btn" title="Modelo de página">
+        ${Icon("layout", { size: 13 })}<span>${PAGE_STYLES.find((s) => s.id === (summary.pageStyle || "minimal")).label}</span>
+      </button>
     </div>
     <input type="text" id="title-input" class="title-input" data-focus-guard placeholder="Título do resumo" value="${escapeAttr(summary.title)}" />
 
@@ -156,7 +173,14 @@ function renderEditor(container, summaryId) {
       <button data-cmd="image" title="Adicionar imagem">${Icon("image", { size: 15 })}</button>
       <button class="ai-btn" id="ai-generate">${Icon("sparkles", { size: 14 })}<span>Gerar com IA</span></button>
     </div>
-    <div id="editor-body" class="editor-body" contenteditable="true" data-focus-guard
+    <div class="editor-toolbar editor-toolbar--insert">
+      <button data-insert="checklist" title="Checklist">${Icon("checkSquare", { size: 15 })}<span>Checklist</span></button>
+      <button data-insert="table" title="Tabela">${Icon("table", { size: 15 })}<span>Tabela</span></button>
+      <button data-insert="code" title="Código">${Icon("code", { size: 15 })}<span>Código</span></button>
+      <button data-insert="callout" title="Caixa de destaque">${Icon("lightbulb", { size: 15 })}<span>Destaque</span></button>
+      <button data-insert="columns" title="Colunas">${Icon("columns", { size: 15 })}<span>Colunas</span></button>
+    </div>
+    <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"}" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
   `;
 
@@ -210,9 +234,40 @@ function renderEditor(container, summaryId) {
   });
 
   container.querySelector("#ai-generate").addEventListener("click", () => openAiGenerateModal(summaryId, editorBody));
+  container.querySelector("#page-style-btn").addEventListener("click", () => openPageStyleModal(summaryId, summary.pageStyle || "minimal"));
 
-  // --- click on an existing linked flashcard mark ---
+  // --- insert-block toolbar ---
+  const INSERTERS = {
+    checklist: () => `<div class="checklist-item" data-checked="false"><span class="check-box"></span><span class="check-text">Item da lista</span></div>`,
+    table: () =>
+      `<table class="editor-table"><tbody>` +
+      `<tr><td>Coluna 1</td><td>Coluna 2</td><td>Coluna 3</td></tr>` +
+      `<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>` +
+      `<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>` +
+      `</tbody></table><p><br></p>`,
+    code: () => `<pre class="code-block">// seu código aqui</pre><p><br></p>`,
+    callout: () =>
+      `<div class="callout"><span class="callout-icon">${Icon("lightbulb", { size: 15 })}</span><span class="callout-text">Escreva aqui uma observação importante...</span></div><p><br></p>`,
+    columns: () => `<div class="columns"><div class="column"><p>Coluna 1</p></div><div class="column"><p>Coluna 2</p></div></div><p><br></p>`,
+  };
+  container.querySelectorAll("[data-insert]").forEach((btn) => {
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", () => {
+      editorBody.focus();
+      document.execCommand("insertHTML", false, INSERTERS[btn.dataset.insert]());
+      editorBody.dispatchEvent(new Event("input"));
+    });
+  });
+
+  // --- click on checklist checkbox or an existing linked flashcard mark ---
   editorBody.addEventListener("click", (e) => {
+    const checkBox = e.target.closest(".check-box");
+    if (checkBox) {
+      const item = checkBox.closest(".checklist-item");
+      item.dataset.checked = item.dataset.checked === "true" ? "false" : "true";
+      editorBody.dispatchEvent(new Event("input"));
+      return;
+    }
     const mark = e.target.closest("mark.linked-fc");
     if (!mark || !mark.dataset.fcId) return;
     const card = store.state.flashcards.find((c) => c.id === mark.dataset.fcId);
@@ -394,4 +449,47 @@ function openAiGenerateModal(summaryId, editorBody) {
       },
     }
   );
+}
+
+function openPageStyleModal(summaryId, currentStyle) {
+  openModal(
+    `
+    <h3>${Icon("layout", { size: 16 })} Modelo de página</h3>
+    <p class="modal-sub">Muda só a aparência do resumo — o conteúdo continua o mesmo.</p>
+    <div class="style-grid">
+      ${PAGE_STYLES.map(
+        (s) => `
+        <button class="style-swatch ${s.id === currentStyle ? "selected" : ""}" data-style="${s.id}">
+          <span class="style-preview page-style--${s.id}"></span>
+          <span>${s.label}</span>
+        </button>`
+      ).join("")}
+    </div>`,
+    {
+      onMount: (modal) => {
+        modal.querySelectorAll("[data-style]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyPageStyle(summaryId, btn.dataset.style);
+            closeModal();
+          });
+        });
+      },
+    }
+  );
+}
+
+function applyPageStyle(summaryId, styleId) {
+  const summary = store.state.summaries.find((s) => s.id === summaryId);
+  const patch = { pageStyle: styleId };
+  if (styleId === "cornell" && !/cornell-layout/.test(summary.contentHtml || "")) {
+    const skeleton =
+      `<div class="cornell-layout">` +
+      `<div class="cornell-cue"><p><b>Perguntas / palavras-chave</b></p></div>` +
+      `<div class="cornell-notes"><p>Suas anotações da aula aqui...</p></div>` +
+      `<div class="cornell-summary"><p><b>Resumo:</b> escreva aqui a síntese do conteúdo.</p></div>` +
+      `</div>`;
+    patch.contentHtml = (summary.contentHtml || "") + skeleton;
+  }
+  store.updateSummary(summaryId, patch);
+  showToast(`Modelo "${PAGE_STYLES.find((s) => s.id === styleId).label}" aplicado.`, "layout");
 }

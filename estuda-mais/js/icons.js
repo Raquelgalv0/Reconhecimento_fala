@@ -28,6 +28,11 @@ const PATHS = {
   barChart: '<path d="M5.5 19.5v-8"/><path d="M12 19.5v-13"/><path d="M18.5 19.5V13"/>',
   graduationCap: '<path d="M2.5 9 12 4.8 21.5 9 12 13.2z"/><path d="M6.5 11v4.3c0 1.6 2.6 3 5.5 3s5.5-1.4 5.5-3V11"/>',
   landmark: '<path d="M3.5 20h17"/><path d="M5.5 20v-8.5"/><path d="M9.7 20v-8.5"/><path d="M14.3 20v-8.5"/><path d="M18.5 20v-8.5"/><path d="M2.8 11.5 12 6l9.2 5.5z"/>',
+  checkSquare: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12.3l2.6 2.6L16.5 9"/>',
+  table: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 10h17"/><path d="M9.7 4.5v15"/>',
+  code: '<path d="M9 8l-4.2 4 4.2 4"/><path d="M15 8l4.2 4-4.2 4"/>',
+  columns: '<rect x="4" y="4.5" width="7" height="15" rx="1.5"/><rect x="13" y="4.5" width="7" height="15" rx="1.5"/>',
+  layout: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17"/><path d="M9.7 9.5v11"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {

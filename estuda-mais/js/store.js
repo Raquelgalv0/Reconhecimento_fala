@@ -173,6 +173,7 @@ class Store {
       folderId,
       title,
       contentHtml: "",
+      pageStyle: "minimal",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
