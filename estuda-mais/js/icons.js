@@ -1,0 +1,37 @@
+// Conjunto mínimo de ícones em SVG (sem dependências externas), no lugar de
+// emoji — mesma linha visual usada por produtos como Linear/Notion/Vercel.
+const PATHS = {
+  home: '<path d="M3.5 11.5 12 4.5l8.5 7"/><path d="M5.5 10v9.5h13V10"/><path d="M9.5 19.5v-6h5v6"/>',
+  fileText: '<path d="M6.5 3.5h8l5 5v12h-13z"/><path d="M14.5 3.5v5h5"/><path d="M9 13.5h6"/><path d="M9 17h6"/>',
+  layers: '<rect x="4.5" y="7.5" width="13" height="13" rx="2"/><path d="M8 7.5V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2h-2"/>',
+  folder: '<path d="M3.5 6.5a2 2 0 0 1 2-2h3.6l2 2H18.5a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  plus: '<path d="M12 5.5v13"/><path d="M5.5 12h13"/>',
+  sparkles: '<path d="M12 3.5 13.6 8.4 18.5 10l-4.9 1.6L12 16.5l-1.6-4.9L5.5 10l4.9-1.6z"/><path d="M18.5 3.5v3"/><path d="M17 5h3"/>',
+  flame: '<path d="M12 3c1.1 3.3-3 4.6-3 8.2a3.4 3.4 0 0 0 6.8 0c0-1.2-.6-2-.9-3 1.6.9 2.6 2.9 2.6 5a5.5 5.5 0 1 1-11 0C6.5 8.3 9.5 6.5 12 3z"/>',
+  link: '<path d="M9.5 14.5 14.5 9.5"/><path d="M11 5.5 12 4.5a3.7 3.7 0 0 1 5.5 5.5l-1 1"/><path d="M13 18.5l-1 1a3.7 3.7 0 0 1-5.5-5.5l1-1"/>',
+  image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="8.7" cy="9.5" r="1.4"/><path d="M20.5 15.5 16 11l-4.2 4.2-2-2-6.3 6.3"/>',
+  quote: '<path d="M8 7.2c-2.1 0-3.4 1.6-3.4 3.8S5.9 15 8 15v2c-3.3 0-5.4-2.3-5.4-6S4.7 5.2 8 5.2z"/><path d="M17.4 7.2c-2.1 0-3.4 1.6-3.4 3.8s1.3 4 3.4 4v2c-3.3 0-5.4-2.3-5.4-6s2.1-5.8 5.4-5.8z"/>',
+  highlighter: '<path d="M3.5 20.5 6 20l9-9-2.5-2.5-9 9z"/><path d="M13.5 9 15.7 6.8 19.2 10.3 17 12.5"/><path d="M12.5 20.5H4.5"/>',
+  list: '<path d="M9.5 6.5h10.5"/><path d="M9.5 12h10.5"/><path d="M9.5 17.5h10.5"/><circle cx="4.5" cy="6.5" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17.5" r="1"/>',
+  trash: '<path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7 7.4 20h9.2L17.5 7"/>',
+  pencil: '<path d="M4.5 19.5 5.3 16 16 5.3l3 3L8.3 19z"/><path d="M13.7 6.6l4 4"/>',
+  check: '<circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.3l2.5 2.5 4.9-5.4"/>',
+  checkPlain: '<path d="M5 12.5l4.5 4.5L19.5 7"/>',
+  x: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+  alertCircle: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5"/><circle cx="12" cy="16.3" r="0.9" fill="currentColor" stroke="none"/>',
+  lightbulb: '<path d="M9.7 18.5h4.6"/><path d="M10.3 21h3.4"/><path d="M12 3.5a5.8 5.8 0 0 0-3.3 10.6c.5.4.8.9.8 1.5h5a1.8 1.8 0 0 1 .8-1.5A5.8 5.8 0 0 0 12 3.5z"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none"/>',
+  trendingUp: '<path d="M4 16.5 9.5 11l3.5 3.5L20 7"/><path d="M14.5 7H20v5.5"/>',
+  repeat: '<path d="M4.5 12a7.5 7.5 0 0 1 12.6-5.5l2 1.9"/><path d="M19.5 12a7.5 7.5 0 0 1-12.6 5.5l-2-1.9"/><path d="M17 4.8v3.9h-3.9"/><path d="M7 19.2v-3.9h3.9"/>',
+  map: '<path d="M9 4.5 4.5 6.3v13.2L9 17.7l6 2 4.5-1.8V4.7L15 6.5l-6-2z"/><path d="M9 4.5v13.2"/><path d="M15 6.5v13.2"/>',
+  calendar: '<rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M3.5 10h17"/><path d="M8 3.5v4"/><path d="M16 3.5v4"/>',
+  barChart: '<path d="M5.5 19.5v-8"/><path d="M12 19.5v-13"/><path d="M18.5 19.5V13"/>',
+  graduationCap: '<path d="M2.5 9 12 4.8 21.5 9 12 13.2z"/><path d="M6.5 11v4.3c0 1.6 2.6 3 5.5 3s5.5-1.4 5.5-3V11"/>',
+  landmark: '<path d="M3.5 20h17"/><path d="M5.5 20v-8.5"/><path d="M9.7 20v-8.5"/><path d="M14.3 20v-8.5"/><path d="M18.5 20v-8.5"/><path d="M2.8 11.5 12 6l9.2 5.5z"/>',
+};
+
+export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {
+  const inner = PATHS[name];
+  if (!inner) return "";
+  return `<svg class="icon ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}

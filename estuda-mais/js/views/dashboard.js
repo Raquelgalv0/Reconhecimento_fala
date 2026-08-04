@@ -1,19 +1,20 @@
 import { store } from "../store.js";
+import { Icon } from "../icons.js";
 
 const MODE_LABEL = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação" };
 
 const PRIORITIES = {
   concurso: [
-    { icon: "📊", title: "Ataque o que mais cai", desc: "Priorize baralhos com mais cartas atrasadas — geralmente são os tópicos mais cobrados em prova." },
-    { icon: "🔁", title: "Erros voltam rápido", desc: "O que você errou hoje reaparece amanhã. Não deixe a fila de revisão acumular." },
+    { icon: "barChart", title: "Ataque o que mais cai", desc: "Priorize baralhos com mais cartas atrasadas — geralmente são os tópicos mais cobrados em prova." },
+    { icon: "repeat", title: "Erros voltam rápido", desc: "O que você errou hoje reaparece amanhã. Não deixe a fila de revisão acumular." },
   ],
   vestibular: [
-    { icon: "📚", title: "Vença o conteúdo do dia", desc: "Gere um resumo por tópico logo após a aula e crie os flashcards essenciais na hora." },
-    { icon: "🗺️", title: "Cobertura do edital", desc: "Distribua os resumos entre as áreas (Humanas, Exatas, Biológicas) para não deixar lacunas." },
+    { icon: "fileText", title: "Vença o conteúdo do dia", desc: "Gere um resumo por tópico logo após a aula e crie os flashcards essenciais na hora." },
+    { icon: "map", title: "Cobertura do edital", desc: "Distribua os resumos entre as áreas (Humanas, Exatas, Biológicas) para não deixar lacunas." },
   ],
   graduacao: [
-    { icon: "🗂️", title: "Organize por disciplina", desc: "Crie uma pasta por matéria do semestre e registre resumo + flashcards logo após cada aula." },
-    { icon: "🗓️", title: "Antecipe provas e trabalhos", desc: "Revisar aos poucos ao longo do semestre evita a virada de noite antes da prova." },
+    { icon: "folder", title: "Organize por disciplina", desc: "Crie uma pasta por matéria do semestre e registre resumo + flashcards logo após cada aula." },
+    { icon: "calendar", title: "Antecipe provas e trabalhos", desc: "Revisar aos poucos ao longo do semestre evita a virada de noite antes da prova." },
   ],
 };
 
@@ -34,12 +35,12 @@ export function renderDashboard(container) {
   container.innerHTML = `
     <div class="main-header">
       <div>
-        <h1>Bem-vinda de volta 👋</h1>
+        <h1>Bem-vinda de volta</h1>
         <p class="sub">Seu painel de estudos${modes.length ? ` — modo ${modes.map((m) => MODE_LABEL[m]).join(" + ")}` : ""}.</p>
       </div>
       <div class="btn-row">
-        <button class="btn btn-ghost" id="go-resumos">＋ Novo resumo</button>
-        <button class="btn btn-primary" id="go-review" ${dueToday === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>🔥 Revisar hoje (${dueToday})</button>
+        <button class="btn btn-ghost" id="go-resumos">${Icon("plus", { size: 14 })}<span>Novo resumo</span></button>
+        <button class="btn btn-primary" id="go-review" ${dueToday === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>${Icon("flame", { size: 15 })}<span>Revisar hoje (${dueToday})</span></button>
       </div>
     </div>
 
@@ -51,15 +52,15 @@ export function renderDashboard(container) {
     </div>
 
     <div class="panel">
-      <h3>🎯 Prioridades para o seu modo de estudo</h3>
+      <h3>${Icon("target", { size: 16 })}<span>Prioridades para o seu modo de estudo</span></h3>
       <div class="priority-list">
         ${(modes.length ? modes : ["concurso", "vestibular", "graduacao"])
           .flatMap((m) => PRIORITIES[m] || [])
           .map(
-            (p, i) => `
+            (p) => `
           <div class="priority-item">
-            <div class="num">${i + 1}</div>
-            <div class="txt"><b>${p.icon} ${p.title}</b><span>${p.desc}</span></div>
+            <div class="num">${Icon(p.icon, { size: 13 })}</div>
+            <div class="txt"><b>${p.title}</b><span>${p.desc}</span></div>
           </div>`
           )
           .join("")}
@@ -69,13 +70,13 @@ export function renderDashboard(container) {
     ${
       deckLoad.length
         ? `<div class="panel">
-      <h3>📈 Onde focar agora</h3>
+      <h3>${Icon("trendingUp", { size: 16 })}<span>Onde focar agora</span></h3>
       <div class="priority-list">
         ${deckLoad
           .map(
             (d) => `
           <div class="priority-item">
-            <div class="num">🗂</div>
+            <div class="num">${Icon("folder", { size: 13 })}</div>
             <div class="txt"><b>${d.name}</b><span>${d.total} flashcard${d.total === 1 ? "" : "s"} · ${d.due ? `${d.due} pendente${d.due === 1 ? "" : "s"} hoje` : "em dia"}</span></div>
           </div>`
           )

@@ -2,11 +2,12 @@ import { store } from "./store.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderResumos } from "./views/resumos.js";
 import { renderFlashcards } from "./views/flashcards.js";
+import { Icon } from "./icons.js";
 
 const MODES = [
-  { id: "concurso", emoji: "📊", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
-  { id: "vestibular", emoji: "🎓", title: "Vestibular", desc: "Resumo por tópico, flashcards essenciais e metas de conteúdo." },
-  { id: "graduacao", emoji: "🏛️", title: "Graduação", desc: "Organização por disciplina, datas de provas e revisão para retenção." },
+  { id: "concurso", icon: "barChart", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
+  { id: "vestibular", icon: "graduationCap", title: "Vestibular", desc: "Resumo por tópico, flashcards essenciais e metas de conteúdo." },
+  { id: "graduacao", icon: "landmark", title: "Graduação", desc: "Organização por disciplina, datas de provas e revisão para retenção." },
 ];
 
 const appRoot = document.getElementById("app");
@@ -24,7 +25,7 @@ function renderOnboarding() {
   appRoot.innerHTML = `
     <div class="onboarding-overlay">
       <div class="onboarding-card">
-        <h1>📚 Bem-vinda ao Estuda+</h1>
+        <h1>Bem-vinda ao Estuda+</h1>
         <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso — sem precisar de apps diferentes.</p>
         <div id="mode-list"></div>
         <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:.5;" disabled>Continuar</button>
@@ -37,7 +38,7 @@ function renderOnboarding() {
   MODES.forEach((m) => {
     const card = document.createElement("div");
     card.className = "checkbox-card";
-    card.innerHTML = `<span class="emoji">${m.emoji}</span><div><b>${m.title}</b><span>${m.desc}</span></div>`;
+    card.innerHTML = `<span class="mode-icon">${Icon(m.icon, { size: 19 })}</span><div><b>${m.title}</b><span>${m.desc}</span></div>`;
     card.addEventListener("click", () => {
       if (selected.has(m.id)) selected.delete(m.id);
       else selected.add(m.id);
@@ -95,20 +96,20 @@ function renderSidebar(sidebarEl) {
     <div class="mode-badges">${(store.state.modes || []).map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`).join("")}</div>
 
     <div class="nav">
-      <button class="nav-item ${route === "dashboard" ? "active" : ""}" data-nav="dashboard">🏠 Painel</button>
-      <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">📝 Resumos</button>
-      <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">🗂 Flashcards ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
+      <button class="nav-item ${route === "dashboard" ? "active" : ""}" data-nav="dashboard">${Icon("home")}<span>Painel</span></button>
+      <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">${Icon("fileText")}<span>Resumos</span></button>
+      <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
     </div>
 
-    <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">＋</button></div>
+    <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
     <div class="folder-tree" id="folder-tree">
       ${folders
         .map(
           (f) => `
         <div class="folder-row ${f.depth > 0 ? "sub" : ""}" data-folder="${f.id}">
-          <span>${f.depth > 0 ? "" : "📁"} ${escapeHtml(f.name)}</span>
+          ${f.depth > 0 ? "" : Icon("folder", { size: 14 })}<span>${escapeHtml(f.name)}</span>
           <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
-          <button class="icon-btn" data-add-sub="${f.id}" title="Nova subpasta">＋</button>
+          <button class="icon-btn" data-add-sub="${f.id}" title="Nova subpasta">${Icon("plus", { size: 12 })}</button>
         </div>`
         )
         .join("")}

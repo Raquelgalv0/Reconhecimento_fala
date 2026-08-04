@@ -1,3 +1,5 @@
+import { Icon } from "./icons.js";
+
 export function debounce(fn, wait) {
   let t = null;
   return (...args) => {
@@ -34,7 +36,7 @@ export function relativeDue(dateStr) {
 }
 
 let toastTimer = null;
-export function showToast(message, icon = "✅") {
+export function showToast(message, iconName = "checkPlain") {
   let toastEl = document.getElementById("toast");
   if (!toastEl) {
     toastEl = document.createElement("div");
@@ -42,7 +44,7 @@ export function showToast(message, icon = "✅") {
     toastEl.className = "toast";
     document.body.appendChild(toastEl);
   }
-  toastEl.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+  toastEl.innerHTML = `${Icon(iconName, { size: 15 })}<span>${message}</span>`;
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);

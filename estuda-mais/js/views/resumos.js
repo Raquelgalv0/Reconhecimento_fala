@@ -1,6 +1,7 @@
 import { store } from "../store.js";
 import { debounce, stripHtml, formatDate, showToast, openModal, closeModal } from "../ui-utils.js";
 import { generateSummaryFromText, suggestFlashcardFromSelection } from "../ai.js";
+import { Icon } from "../icons.js";
 
 export function renderResumos(container) {
   const { activeSummaryId, activeFolderId } = store.state.ui;
@@ -47,11 +48,11 @@ function renderList(container, activeFolderId) {
         <h1>Resumos</h1>
         <p class="sub">Escreva do zero, peça para a IA gerar a partir de um material e transforme trechos em flashcards com um clique.</p>
       </div>
-      <button class="btn btn-primary" id="btn-new-summary">＋ Novo resumo</button>
+      <button class="btn btn-primary" id="btn-new-summary">${Icon("plus", { size: 14 })}<span>Novo resumo</span></button>
     </div>
     <div class="btn-row" style="flex-wrap:wrap; margin-bottom:18px;">${chips}</div>
     <div class="summary-grid">
-      <button class="new-card" id="new-card-inline"><span class="plus">＋</span>Novo resumo</button>
+      <button class="new-card" id="new-card-inline">${Icon("plus", { size: 20 })}<span>Novo resumo</span></button>
       ${summaries
         .map((s) => {
           const count = store.flashcardCountForSummary(s.id);
@@ -62,13 +63,13 @@ function renderList(container, activeFolderId) {
           <div class="meta">
             <span>${store.folderPath(s.folderId)}</span>
             <span>· ${formatDate(s.updatedAt)}</span>
-            ${count ? `<span class="fc-count">🗂 ${count} flashcard${count > 1 ? "s" : ""}</span>` : ""}
+            ${count ? `<span class="fc-count">${Icon("layers", { size: 11 })} ${count} flashcard${count > 1 ? "s" : ""}</span>` : ""}
           </div>
         </div>`;
         })
         .join("")}
     </div>
-    ${summaries.length === 0 ? `<div class="empty-state"><div class="big">📝</div>Nenhum resumo neste assunto ainda.</div>` : ""}
+    ${summaries.length === 0 ? `<div class="empty-state"><div class="big">${Icon("fileText", { size: 30 })}</div>Nenhum resumo neste assunto ainda.</div>` : ""}
   `;
 
   container.querySelectorAll("[data-filter]").forEach((btn) => {
@@ -87,7 +88,7 @@ function renderList(container, activeFolderId) {
 function openNewSummaryModal(defaultFolderId) {
   const folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "⚠️");
+    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
     return;
   }
   openModal(
@@ -133,10 +134,10 @@ function renderEditor(container, summaryId) {
   container.innerHTML = `
     <div class="btn-row" style="justify-content:space-between; margin-bottom:8px;">
       <button class="btn btn-ghost btn-sm" id="back">← Todos os resumos</button>
-      <button class="btn btn-ghost btn-sm" id="delete-summary" style="color:var(--red)">🗑 Excluir</button>
+      <button class="btn btn-ghost btn-sm" id="delete-summary" style="color:var(--red)">${Icon("trash", { size: 13 })}<span>Excluir</span></button>
     </div>
     <div class="folder-picker-inline">
-      📁 Salvo em
+      ${Icon("folder", { size: 13 })} Salvo em
       <select id="folder-select">${folderOptionsHtml(summary.folderId)}</select>
     </div>
     <input type="text" id="title-input" class="title-input" data-focus-guard placeholder="Título do resumo" value="${escapeAttr(summary.title)}" />
@@ -147,13 +148,13 @@ function renderEditor(container, summaryId) {
       <button data-cmd="formatBlock:h2" title="Título">H2</button>
       <button data-cmd="formatBlock:h3" title="Subtítulo">H3</button>
       <div class="sep"></div>
-      <button data-cmd="insertUnorderedList" title="Lista">• ―</button>
-      <button data-cmd="formatBlock:blockquote" title="Citação">❝</button>
-      <button data-cmd="highlight" title="Destacar">🖍</button>
+      <button data-cmd="insertUnorderedList" title="Lista">${Icon("list", { size: 15 })}</button>
+      <button data-cmd="formatBlock:blockquote" title="Citação">${Icon("quote", { size: 15 })}</button>
+      <button data-cmd="highlight" title="Destacar">${Icon("highlighter", { size: 15 })}</button>
       <div class="sep"></div>
-      <button data-cmd="link" title="Adicionar link">🔗</button>
-      <button data-cmd="image" title="Adicionar imagem">🖼</button>
-      <button class="ai-btn" id="ai-generate">✨ Gerar com IA</button>
+      <button data-cmd="link" title="Adicionar link">${Icon("link", { size: 15 })}</button>
+      <button data-cmd="image" title="Adicionar imagem">${Icon("image", { size: 15 })}</button>
+      <button class="ai-btn" id="ai-generate">${Icon("sparkles", { size: 14 })}<span>Gerar com IA</span></button>
     </div>
     <div id="editor-body" class="editor-body" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
@@ -216,7 +217,7 @@ function renderEditor(container, summaryId) {
     if (!mark || !mark.dataset.fcId) return;
     const card = store.state.flashcards.find((c) => c.id === mark.dataset.fcId);
     if (card) {
-      showToast("Abrindo o flashcard vinculado...", "🗂");
+      showToast("Abrindo o flashcard vinculado...", "layers");
       store.setRoute("flashcards", { activeDeckId: card.folderId });
     }
   });
@@ -250,8 +251,8 @@ function setupSelectionToolbar(editorBody, summary) {
     bar.id = "selection-toolbar";
     bar.className = "selection-toolbar";
     bar.innerHTML = `
-      <button id="sel-highlight">🖍 Destacar</button>
-      <button id="sel-flashcard" class="primary">✨ Criar Flashcard</button>
+      <button id="sel-highlight">${Icon("highlighter", { size: 13 })}<span>Destacar</span></button>
+      <button id="sel-flashcard" class="primary">${Icon("sparkles", { size: 13 })}<span>Criar Flashcard</span></button>
     `;
     document.body.appendChild(bar);
   }
@@ -311,8 +312,8 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
 
   openModal(
     `
-    <h3>✨ Criar flashcard a partir do trecho</h3>
-    <div class="ai-source-note">💡 Sugestão gerada automaticamente a partir do texto selecionado. Revise antes de salvar.</div>
+    <h3>${Icon("sparkles", { size: 16 })} Criar flashcard a partir do trecho</h3>
+    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Sugestão gerada automaticamente a partir do texto selecionado. Revise antes de salvar.</span></div>
     <div class="field">
       <label>Frente (pergunta)</label>
       <textarea id="f-front">${escapeAttr(suggestion.front)}</textarea>
@@ -341,7 +342,7 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
           const back = modal.querySelector("#f-back").value.trim();
           const hint = modal.querySelector("#f-hint").value.trim();
           if (!front || !back) {
-            showToast("Preencha frente e verso.", "⚠️");
+            showToast("Preencha frente e verso.", "alertCircle");
             return;
           }
           const card = store.addFlashcard({ folderId: summary.folderId, front, back, hint, summaryId: summary.id });
@@ -353,7 +354,7 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
           }
           store.updateSummary(summary.id, { contentHtml: editorBody.innerHTML });
           closeModal();
-          showToast(`Flashcard criado e sincronizado com "${deckName}" ✨`, "🗂");
+          showToast(`Flashcard criado e sincronizado com "${deckName}"`, "layers");
         });
       },
     }
@@ -363,8 +364,8 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
 function openAiGenerateModal(summaryId, editorBody) {
   openModal(
     `
-    <h3>✨ Gerar resumo com IA</h3>
-    <div class="ai-source-note">💡 Neste protótipo a geração roda localmente (sem enviar dados para fora) — na versão final chamaria um modelo de linguagem real.</div>
+    <h3>${Icon("sparkles", { size: 16 })} Gerar resumo com IA</h3>
+    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Neste protótipo a geração roda localmente (sem enviar dados para fora) — na versão final chamaria um modelo de linguagem real.</span></div>
     <div class="field">
       <label>Cole o material (aula, PDF copiado, anotações...)</label>
       <textarea id="f-source" style="min-height:160px" placeholder="Cole aqui o texto-base..."></textarea>
@@ -380,7 +381,7 @@ function openAiGenerateModal(summaryId, editorBody) {
         modal.querySelector("#confirm").addEventListener("click", () => {
           const text = modal.querySelector("#f-source").value.trim();
           if (!text) {
-            showToast("Cole um texto para gerar o resumo.", "⚠️");
+            showToast("Cole um texto para gerar o resumo.", "alertCircle");
             return;
           }
           const html = generateSummaryFromText(text);
@@ -388,7 +389,7 @@ function openAiGenerateModal(summaryId, editorBody) {
           editorBody.innerHTML = isEmpty ? html : editorBody.innerHTML + "<hr/>" + html;
           store.updateSummary(summaryId, { contentHtml: editorBody.innerHTML });
           closeModal();
-          showToast("Resumo gerado com IA (simulado) ✨");
+          showToast("Resumo gerado com IA (simulado).", "sparkles");
         });
       },
     }

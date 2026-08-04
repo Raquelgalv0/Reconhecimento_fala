@@ -1,6 +1,7 @@
 import { store } from "../store.js";
 import { showToast, openModal, closeModal, relativeDue } from "../ui-utils.js";
 import { scheduleNext, isDueToday } from "../srs.js";
+import { Icon } from "../icons.js";
 
 // Fila de revisão da sessão atual — guardada fora do ciclo de render para
 // sobreviver aos re-renders disparados a cada resposta (Errei/Acertei).
@@ -29,9 +30,9 @@ function renderDecksGrid(container) {
         <p class="sub">Baralhos organizados por assunto — sincronizados automaticamente com os resumos.</p>
       </div>
       <div class="btn-row">
-        <button class="btn btn-ghost" id="btn-new-card">＋ Novo flashcard</button>
+        <button class="btn btn-ghost" id="btn-new-card">${Icon("plus", { size: 14 })}<span>Novo flashcard</span></button>
         <button class="btn btn-primary" id="btn-review-all" ${totalDue === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>
-          🔥 Revisar hoje ${totalDue ? `(${totalDue})` : ""}
+          ${Icon("flame", { size: 15 })}<span>Revisar hoje ${totalDue ? `(${totalDue})` : ""}</span>
         </button>
       </div>
     </div>
@@ -45,13 +46,13 @@ function renderDecksGrid(container) {
           <div class="deck-name">${"— ".repeat(f.depth)}${esc(f.name)}</div>
           <div class="deck-stats">
             <span>${cards.length} carta${cards.length === 1 ? "" : "s"}</span>
-            ${due ? `<span class="due-pill">${due} p/ hoje</span>` : `<span>em dia ✓</span>`}
+            ${due ? `<span class="due-pill">${due} p/ hoje</span>` : `<span class="due-ok">${Icon("checkPlain", { size: 12 })} em dia</span>`}
           </div>
         </div>`;
         })
         .join("")}
     </div>
-    ${folders.length === 0 ? `<div class="empty-state"><div class="big">🗂</div>Crie um assunto na barra lateral para começar.</div>` : ""}
+    ${folders.length === 0 ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na barra lateral para começar.</div>` : ""}
   `;
 
   container.querySelectorAll("[data-deck]").forEach((el) => {
@@ -84,8 +85,8 @@ function renderDeckDetail(container, deckId) {
         <p class="sub">${cards.length} flashcard${cards.length === 1 ? "" : "s"} · ${due ? `${due} para revisar hoje` : "tudo em dia"}</p>
       </div>
       <div class="btn-row">
-        <button class="btn btn-ghost" id="btn-new-card">＋ Novo flashcard</button>
-        <button class="btn btn-primary" id="btn-review-deck" ${due === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>🔥 Revisar (${due})</button>
+        <button class="btn btn-ghost" id="btn-new-card">${Icon("plus", { size: 14 })}<span>Novo flashcard</span></button>
+        <button class="btn btn-primary" id="btn-review-deck" ${due === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>${Icon("flame", { size: 15 })}<span>Revisar (${due})</span></button>
       </div>
     </div>
     <div class="flash-list">
@@ -95,12 +96,12 @@ function renderDeckDetail(container, deckId) {
         <div class="flash-row" data-card="${c.id}">
           <span class="front">${esc(c.front)}</span>
           <span class="due-tag ${isDueToday(c) ? "today" : ""}">${isDueToday(c) ? "revisar hoje" : `próx. rev. ${relativeDue(c.srs.dueDate)}`}</span>
-          <button class="btn btn-sm btn-ghost" data-edit="${c.id}">✎</button>
+          <button class="btn btn-sm btn-ghost" data-edit="${c.id}">${Icon("pencil", { size: 13 })}</button>
         </div>`
         )
         .join("")}
     </div>
-    ${cards.length === 0 ? `<div class="empty-state"><div class="big">🗂</div>Nenhum flashcard neste baralho ainda.</div>` : ""}
+    ${cards.length === 0 ? `<div class="empty-state"><div class="big">${Icon("layers", { size: 30 })}</div>Nenhum flashcard neste baralho ainda.</div>` : ""}
   `;
 
   container.querySelector("#back").addEventListener("click", () => store.setRoute("flashcards", { activeDeckId: null }));
@@ -125,7 +126,7 @@ function folderOptionsHtml(selectedId) {
 function openManualCardModal(defaultFolderId) {
   const folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "⚠️");
+    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
     return;
   }
   const initialFolder = defaultFolderId || folders[0].id;
@@ -171,7 +172,7 @@ function openManualCardModal(defaultFolderId) {
           const hint = hintInput.value.trim();
           const folderId = folderSelect.value;
           if (!front || !back) {
-            showToast("Preencha frente e verso.", "⚠️");
+            showToast("Preencha frente e verso.", "alertCircle");
             return;
           }
           store.addFlashcard({ folderId, front, back, hint });
@@ -193,7 +194,7 @@ function openEditCardModal(cardId) {
     <div class="field"><label>Verso</label><textarea id="f-back">${esc(card.back)}</textarea></div>
     <div class="field"><label>Dica</label><input type="text" id="f-hint" value="${esc(card.hint || store.folderPath(card.folderId))}" /></div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn btn-ghost" id="delete" style="color:var(--red)">🗑 Excluir</button>
+      <button class="btn btn-ghost" id="delete" style="color:var(--red)">${Icon("trash", { size: 14 })}<span>Excluir</span></button>
       <div class="btn-row">
         <button class="btn btn-ghost" id="cancel">Cancelar</button>
         <button class="btn btn-primary" id="confirm">Salvar</button>
@@ -227,7 +228,7 @@ function openEditCardModal(cardId) {
 function startReview(deckId) {
   const due = store.cardsDueToday(deckId).map((c) => c.id);
   if (due.length === 0) {
-    showToast("Nada para revisar por aqui agora 🎉");
+    showToast("Nada para revisar por aqui agora.", "check");
     return;
   }
   session = { queue: due, index: 0 };
@@ -244,7 +245,7 @@ function renderReview(container, deckId) {
   if (index >= queue.length) {
     container.innerHTML = `
       <div class="empty-review">
-        <div class="big">🎉</div>
+        <div class="big">${Icon("check", { size: 40, strokeWidth: 1.5 })}</div>
         <h2>Sessão concluída!</h2>
         <p>Você revisou ${queue.length} flashcard${queue.length === 1 ? "" : "s"}. A fila de amanhã já está sendo montada.</p>
         <button class="btn btn-primary" id="finish" style="margin-top:14px;">Voltar aos baralhos</button>
@@ -269,7 +270,7 @@ function renderReview(container, deckId) {
       <div class="flip-card">
         <div class="flip-card-inner" id="flip-inner">
           <div class="flip-face front">
-            <div class="hint-chip" id="hint-chip" title="Clique para ver a dica">💡 dica</div>
+            <div class="hint-chip" id="hint-chip" title="Clique para ver a dica">${Icon("lightbulb", { size: 12 })}<span>dica</span></div>
             <div class="kicker">Pergunta</div>
             <div class="content">${esc(card.front)}</div>
             <div class="flip-hint">clique no cartão para virar</div>
@@ -281,8 +282,8 @@ function renderReview(container, deckId) {
         </div>
       </div>
       <div class="review-actions" id="actions" style="visibility:hidden">
-        <button class="btn-erro" id="btn-errei">✕ Errei</button>
-        <button class="btn-acerto" id="btn-acertei">✓ Acertei</button>
+        <button class="btn-erro" id="btn-errei">${Icon("x", { size: 15 })}<span>Errei</span></button>
+        <button class="btn-acerto" id="btn-acertei">${Icon("checkPlain", { size: 15 })}<span>Acertei</span></button>
       </div>
       <div class="flip-tip">baseado em Acertei/Errei — o intervalo cresce a cada acerto (2, 4, 8, 15, 30 dias...)</div>
     </div>`;
@@ -295,7 +296,7 @@ function renderReview(container, deckId) {
   });
   container.querySelector("#hint-chip").addEventListener("click", (e) => {
     e.stopPropagation();
-    showToast(`Assunto: ${hintText}`, "💡");
+    showToast(`Assunto: ${hintText}`, "lightbulb");
   });
 
   const grade = (result) => {
