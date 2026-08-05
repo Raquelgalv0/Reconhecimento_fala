@@ -310,6 +310,50 @@ input, textarea, select {
 .goal-bar { width: 100%; height: 10px; border-radius: 999px; background: var(--bg); overflow: hidden; }
 .goal-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
 
+/* ---------- Upload de materiais ---------- */
+.upload-options { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 18px; }
+.upload-opt {
+  display: flex; align-items: center; gap: 7px; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--ink-soft); cursor: pointer;
+}
+.upload-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.upload-opt input[type="checkbox"] { accent-color: var(--accent); }
+.upload-opt .opt-count {
+  width: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 2px 4px;
+  text-align: center; font-size: 12px; margin-left: 2px; background: var(--bg-elevated); color: var(--ink);
+}
+
+.preview-block { margin-bottom: 20px; }
+.preview-block b { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 8px; }
+.preview-box {
+  border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; background: var(--bg);
+}
+.preview-box.editor-body { min-height: auto; border-radius: 12px; }
+.preview-flashcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.preview-fc { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font-size: 12.5px; }
+.preview-fc .fc-front { padding: 10px 12px; font-weight: 600; border-bottom: 1px dashed var(--border); }
+.preview-fc .fc-back { padding: 10px 12px; color: var(--ink-soft); background: var(--bg); }
+.preview-question { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 13px; }
+.preview-question p { margin: 0 0 8px; }
+
+/* mapa mental */
+.mindmap { display: flex; flex-direction: column; align-items: center; padding: 18px 10px 4px; }
+.mm-center {
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 13.5px;
+  padding: 10px 20px; border-radius: 999px; box-shadow: var(--shadow-1); position: relative; z-index: 1;
+}
+.mm-branches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 14px; margin-top: 18px; position: relative; }
+.mm-branches::before {
+  content: ""; position: absolute; top: -18px; left: 50%; width: 1px; height: 18px; background: var(--border);
+}
+.mm-branch {
+  background: var(--bg-elevated); border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 8px 14px; font-size: 12.5px; color: var(--ink); max-width: 220px; position: relative;
+}
+.mm-branch::before {
+  content: ""; position: absolute; top: -10px; left: 50%; width: 1px; height: 10px; background: var(--border);
+}
+
 /* ---------- Resumos ---------- */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .summary-card {

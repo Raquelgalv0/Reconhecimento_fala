@@ -4,6 +4,7 @@ import { renderResumos } from "./views/resumos.js";
 import { renderFlashcards } from "./views/flashcards.js";
 import { renderQuestoes } from "./views/questoes.js";
 import { renderDesempenho } from "./views/desempenho.js";
+import { renderUpload } from "./views/upload.js";
 import { Icon } from "./icons.js";
 
 const MODES = [
@@ -92,6 +93,7 @@ function renderMain(mainEl) {
   if (route === "flashcards") return renderFlashcards(mainEl);
   if (route === "questoes") return renderQuestoes(mainEl);
   if (route === "desempenho") return renderDesempenho(mainEl);
+  if (route === "upload") return renderUpload(mainEl);
   return renderDashboard(mainEl);
 }
 
@@ -112,6 +114,7 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
       <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
+      <button class="nav-item ${route === "upload" ? "active" : ""}" data-nav="upload">${Icon("upload")}<span>Upload de Materiais</span></button>
     </div>
 
     <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
@@ -138,6 +141,7 @@ function renderSidebar(sidebarEl) {
       else if (target === "flashcards") store.setRoute("flashcards", { activeDeckId: null, reviewing: false });
       else if (target === "questoes") store.setRoute("questoes", { activeQuestionFolderId: null, questionFilter: "all", practicing: false });
       else if (target === "desempenho") store.setRoute("desempenho");
+      else if (target === "upload") store.setRoute("upload");
       else store.setRoute("dashboard");
     });
   });
