@@ -57,13 +57,18 @@ export function renderDashboard(container) {
       <h3>${Icon("target", { size: 16 })}<span>Prioridades para o seu modo de estudo</span></h3>
       <div class="priority-list">
         ${(modes.length ? modes : ["concurso", "vestibular", "graduacao"])
-          .flatMap((m) => PRIORITIES[m] || [])
           .map(
-            (p) => `
-          <div class="priority-item">
-            <div class="num">${Icon(p.icon, { size: 13 })}</div>
-            <div class="txt"><b>${p.title}</b><span>${p.desc}</span></div>
-          </div>`
+            (m) => `
+          ${modes.length > 1 ? `<div class="priority-group-label">${MODE_LABEL[m]}</div>` : ""}
+          ${(PRIORITIES[m] || [])
+            .map(
+              (p) => `
+            <div class="priority-item">
+              <div class="num">${Icon(p.icon, { size: 13 })}</div>
+              <div class="txt"><b>${p.title}</b><span>${p.desc}</span></div>
+            </div>`
+            )
+            .join("")}`
           )
           .join("")}
       </div>

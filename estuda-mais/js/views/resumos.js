@@ -70,13 +70,14 @@ function renderList(container, activeFolderId) {
       ${summaries
         .map((s) => {
           const count = store.flashcardCountForSummary(s.id);
+          const folderName = store.state.folders.find((f) => f.id === s.folderId)?.name || "";
           return `
         <div class="summary-card" data-open="${s.id}">
           <h4>${escapeAttr(s.title || "Sem título")}</h4>
           <div class="excerpt">${escapeAttr(stripHtml(s.contentHtml)).slice(0, 140) || "Resumo vazio — clique para escrever."}</div>
           <div class="meta">
-            <span>${store.folderPath(s.folderId)}</span>
-            <span>· ${formatDate(s.updatedAt)}</span>
+            <span class="meta-folder" title="${escapeAttr(store.folderPath(s.folderId))}">${escapeAttr(folderName)}</span>
+            <span class="meta-sep">· ${formatDate(s.updatedAt)}</span>
             ${count ? `<span class="fc-count">${Icon("layers", { size: 11 })} ${count} flashcard${count > 1 ? "s" : ""}</span>` : ""}
           </div>
         </div>`;

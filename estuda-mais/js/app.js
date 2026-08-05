@@ -156,11 +156,28 @@ function renderShell() {
   appRoot.innerHTML = `
     <div class="shell">
       <nav class="sidebar" id="sidebar"></nav>
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" title="Menu">${Icon("menu", { size: 18 })}</button>
       <main class="main" id="main"></main>
     </div>`;
 
   const sidebarEl = appRoot.querySelector("#sidebar");
   const mainEl = appRoot.querySelector("#main");
+  const backdropEl = appRoot.querySelector("#sidebar-backdrop");
+
+  const closeMobileSidebar = () => {
+    sidebarEl.classList.remove("mobile-open");
+    backdropEl.classList.remove("show");
+  };
+
+  appRoot.querySelector("#mobile-menu-btn").addEventListener("click", () => {
+    sidebarEl.classList.toggle("mobile-open");
+    backdropEl.classList.toggle("show");
+  });
+  backdropEl.addEventListener("click", closeMobileSidebar);
+  sidebarEl.addEventListener("click", (e) => {
+    if (e.target.closest("[data-nav], [data-folder]")) closeMobileSidebar();
+  });
 
   const safeRender = () => {
     renderSidebar(sidebarEl);

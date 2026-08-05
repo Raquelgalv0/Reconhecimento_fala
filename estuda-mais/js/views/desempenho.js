@@ -25,7 +25,10 @@ export function renderDesempenho(container) {
   const progressPct = Math.min(100, Math.round((progress.done / progress.goal) * 100));
   const mastery = store.topicMasteryStats();
   const mostError = [...mastery].sort((a, b) => b.errorRate - a.errorRate).slice(0, 4);
-  const dominated = [...mastery].filter((s) => s.total >= 2).sort((a, b) => a.errorRate - b.errorRate).slice(0, 4);
+  const dominated = [...mastery]
+    .filter((s) => s.total >= 2 && s.errorRate <= 0.4)
+    .sort((a, b) => a.errorRate - b.errorRate)
+    .slice(0, 4);
   const bestDay = store.bestDay();
 
   container.innerHTML = `
