@@ -163,7 +163,10 @@ input, textarea, select {
   color: #6e6e93;
   border-top: 1px solid rgba(255,255,255,0.08);
   padding-top: 12px;
+  display: flex; align-items: flex-start; gap: 8px;
 }
+.sidebar-footer .icon-btn { flex-shrink: 0; color: #8b8ba8; }
+.sidebar-footer .icon-btn:hover { background: var(--bg-sidebar-hover); color: #fff; }
 
 /* ---------- Main ---------- */
 .main {
@@ -779,10 +782,12 @@ mark { background: #ffe28a; border-radius: 3px; padding: 0 2px; }
 }
 .onboarding-card {
   background: var(--bg-elevated); border-radius: 20px; padding: 36px 38px; width: 520px; max-width: 92vw;
+  max-height: 90vh; overflow-y: auto;
   box-shadow: var(--shadow-2);
 }
 .onboarding-card h1 { font-size: 24px; margin: 0 0 6px; }
 .onboarding-card p { color: var(--ink-soft); font-size: 14px; margin: 0 0 22px; }
+.onboarding-step { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 8px; }
 
 .empty-state { text-align: center; padding: 50px 20px; color: var(--ink-soft); }
 .empty-state .big { display: flex; justify-content: center; color: var(--ink-faint); margin-bottom: 10px; }

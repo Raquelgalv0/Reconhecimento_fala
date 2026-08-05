@@ -20,10 +20,12 @@ const PRIORITIES = {
 
 export function renderDashboard(container) {
   const modes = store.state.modes || [];
+  const profile = store.state.profile || {};
   const totalSummaries = store.state.summaries.length;
   const totalCards = store.state.flashcards.length;
   const dueToday = store.cardsDueToday().length;
   const decks = store.state.folders.length;
+  const greeting = profile.name ? `Olá, ${profile.name}!` : "Bem-vinda de volta";
 
   const deckLoad = store
     .flattenFolders()
@@ -35,7 +37,7 @@ export function renderDashboard(container) {
   container.innerHTML = `
     <div class="main-header">
       <div>
-        <h1>Bem-vinda de volta</h1>
+        <h1>${greeting}</h1>
         <p class="sub">Seu painel de estudos${modes.length ? ` — modo ${modes.map((m) => MODE_LABEL[m]).join(" + ")}` : ""}.</p>
       </div>
       <div class="btn-row">

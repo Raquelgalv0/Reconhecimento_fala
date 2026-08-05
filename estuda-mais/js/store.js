@@ -21,6 +21,7 @@ function seedState() {
   return {
     onboarded: false,
     modes: [],
+    profile: { name: "", studyArea: "", level: "", dailyTimeMinutes: null },
     folders: [
       { id: folderConst, name: "Direito Constitucional", parentId: null },
       { id: folderControle, name: "Controle de Constitucionalidade", parentId: folderConst },
@@ -640,9 +641,22 @@ class Store {
     this.save();
   }
 
-  setOnboarded(modes) {
+  completeOnboarding({ modes, profile, materias }) {
     this.state.modes = modes;
+    this.state.profile = profile;
+    (materias || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((name) => {
+        const exists = this.state.folders.some((f) => !f.parentId && f.name.toLowerCase() === name.toLowerCase());
+        if (!exists) this.state.folders.push({ id: uid("f"), name, parentId: null });
+      });
     this.state.onboarded = true;
+    this.save();
+  }
+  updateProfile(patch) {
+    this.state.profile = { ...this.state.profile, ...patch };
     this.save();
   }
 
