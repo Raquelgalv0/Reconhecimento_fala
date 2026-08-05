@@ -818,4 +818,12 @@ mark { background: #ffe28a; border-radius: 3px; padding: 0 2px; }
   .sidebar-backdrop.show { display: block; position: fixed; inset: 0; background: rgba(20, 20, 43, 0.45); z-index: 200; }
   .main { padding-top: 74px; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid--3 { grid-template-columns: 1fr; }
+  .editor-toolbar { flex-wrap: wrap; position: static; }
+  .editor-toolbar .ai-btn { margin-left: 0; }
+  .editor-toolbar--insert { position: static; }
+  .btn-row { flex-wrap: wrap; }
+  .folder-picker-inline { flex-wrap: wrap; }
+  .page-style-btn { margin-left: 0; }
+  .main-header { flex-wrap: wrap; }
 }
