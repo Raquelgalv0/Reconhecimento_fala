@@ -5,7 +5,6 @@ import { renderFlashcards } from "./views/flashcards.js";
 import { renderQuestoes } from "./views/questoes.js";
 import { renderDesempenho } from "./views/desempenho.js";
 import { renderUpload } from "./views/upload.js";
-import { renderRedacao } from "./views/redacao.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 
@@ -204,7 +203,6 @@ function renderMain(mainEl) {
   if (route === "questoes") return renderQuestoes(mainEl);
   if (route === "desempenho") return renderDesempenho(mainEl);
   if (route === "upload") return renderUpload(mainEl);
-  if (route === "redacao") return renderRedacao(mainEl);
   return renderDashboard(mainEl);
 }
 
@@ -226,7 +224,6 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
       <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
       <button class="nav-item ${route === "upload" ? "active" : ""}" data-nav="upload">${Icon("upload")}<span>Upload de Materiais</span></button>
-      <button class="nav-item ${route === "redacao" ? "active" : ""}" data-nav="redacao">${Icon("pencil")}<span>Redação ENEM</span></button>
     </div>
 
     <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
@@ -257,7 +254,6 @@ function renderSidebar(sidebarEl) {
       else if (target === "questoes") store.setRoute("questoes", { activeQuestionFolderId: null, questionFilter: "all", practicing: false });
       else if (target === "desempenho") store.setRoute("desempenho");
       else if (target === "upload") store.setRoute("upload");
-      else if (target === "redacao") store.setRoute("redacao", { redacaoView: "list", activeEssayId: null });
       else store.setRoute("dashboard");
     });
   });

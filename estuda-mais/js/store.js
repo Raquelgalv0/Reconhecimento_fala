@@ -98,7 +98,6 @@ function seedState() {
     ...seedQuestionData(folderControle, folderDengue),
     dailyGoal: 10,
     dailyLog: seedDailyLog(),
-    essays: seedEssays(),
     ui: {
       route: "dashboard",
       activeFolderId: null,
@@ -108,8 +107,6 @@ function seedState() {
       practicing: false,
       activeQuestionFolderId: null,
       questionFilter: "all",
-      redacaoView: "list",
-      activeEssayId: null,
     },
   };
 }
@@ -247,36 +244,6 @@ function seedDailyLog() {
   return log;
 }
 
-function seedEssays() {
-  return [
-    {
-      id: uid("es"),
-      title: "Desafios da mobilidade urbana no Brasil",
-      theme: "Os desafios para a mobilidade urbana sustentável nas grandes cidades brasileiras",
-      text:
-        "A mobilidade urbana nas grandes cidades brasileiras é um problema histórico que afeta diretamente a qualidade de vida da população. O crescimento desordenado dos centros urbanos, aliado à priorização do transporte individual, gerou congestionamentos crônicos e sistemas de transporte público ineficientes.\n\n" +
-        "Nesse sentido, é possível apontar duas causas centrais para esse cenário. Em primeiro lugar, o investimento insuficiente em infraestrutura de transporte coletivo de qualidade faz com que grande parte da população não tenha alternativas viáveis ao automóvel particular. Além disso, o planejamento urbano historicamente voltado para os carros, com pouca atenção a ciclovias e calçadas, reforça essa dependência.\n\n" +
-        "Por outro lado, os impactos dessa situação vão além do trânsito: o tempo perdido em deslocamentos reduz a produtividade, a poluição do ar prejudica a saúde pública e a desigualdade de acesso à cidade se aprofunda, já que os bairros periféricos costumam ter o pior atendimento de transporte.\n\n" +
-        "Portanto, é fundamental que o poder público, em parceria com a sociedade civil, invista na ampliação e modernização do transporte coletivo, priorizando corredores de ônibus e metrôs nas regiões periféricas. Ademais, o Ministério das Cidades deve articular políticas de incentivo ao uso de bicicletas e à criação de zonas de baixa emissão, garantindo, assim, cidades mais sustentáveis e acessíveis para toda a população.",
-      corrected: true,
-      total: 820,
-      scores: { c1: 160, c2: 180, c3: 160, c4: 140, c5: 180 },
-      feedback: {
-        c1: "Boa norma culta, com poucos desvios pontuais de concordância e pontuação — releia o segundo parágrafo com atenção às vírgulas.",
-        c2: "Excelente domínio do tema proposto, mantendo o foco na mobilidade urbana sustentável do início ao fim.",
-        c3: "Argumentação organizada em causas e consequências, mas os parágrafos de desenvolvimento poderiam trazer um dado ou exemplo concreto para reforçar os argumentos.",
-        c4: "Bom uso de conectivos ('Nesse sentido', 'Além disso', 'Por outro lado', 'Portanto'), mas repete 'transporte' muitas vezes — varie o vocabulário.",
-        c5: "Proposta de intervenção completa: tem agente (poder público/Ministério das Cidades), ação (ampliar transporte, criar zonas de baixa emissão) e detalhamento.",
-      },
-      suggestions: [
-        "Adicione um dado estatístico ou exemplo real no desenvolvimento para fortalecer a competência 3.",
-        "Varie o vocabulário para evitar repetir 'transporte' e 'cidades' com tanta frequência.",
-        "Revise a pontuação do segundo parágrafo.",
-      ],
-      createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    },
-  ];
-}
 
 function load() {
   try {
@@ -611,34 +578,6 @@ class Store {
         return { folderId: f.id, name: f.name, path: this.folderPath(f.id), total, errorRate: total ? wrong / total : 0 };
       })
       .filter((s) => s.total > 0);
-  }
-
-  // ---- Redação (ENEM) ----
-  addEssay({ title, theme, text }) {
-    const essay = {
-      id: uid("es"),
-      title: title || "Redação sem título",
-      theme,
-      text,
-      corrected: false,
-      scores: null,
-      feedback: null,
-      suggestions: null,
-      createdAt: new Date().toISOString(),
-    };
-    this.state.essays.push(essay);
-    this.save();
-    return essay;
-  }
-  updateEssay(id, patch) {
-    const e = this.state.essays.find((x) => x.id === id);
-    if (!e) return;
-    Object.assign(e, patch);
-    this.save();
-  }
-  deleteEssay(id) {
-    this.state.essays = this.state.essays.filter((e) => e.id !== id);
-    this.save();
   }
 
   completeOnboarding({ modes, profile, materias }) {
