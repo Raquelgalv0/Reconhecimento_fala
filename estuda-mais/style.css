@@ -354,6 +354,18 @@ input, textarea, select {
   content: ""; position: absolute; top: -10px; left: 50%; width: 1px; height: 10px; background: var(--border);
 }
 
+/* caso clínico (Modo Medicina) */
+.clinical-case {
+  border: 1.5px solid #bfe3e3; border-radius: 12px; overflow: hidden; margin: 14px 0; background: #fff;
+}
+.cc-header {
+  display: flex; align-items: center; gap: 7px; background: #e3f4f4; color: #1f7f84;
+  font-weight: 700; font-size: 13px; padding: 10px 16px;
+}
+.cc-field { padding: 10px 16px; border-top: 1px dashed #d9ece9; }
+.cc-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #2f9ea3; margin-bottom: 3px; }
+.cc-field p { margin: 0; font-size: 13.5px; }
+
 /* ---------- Redação ENEM ---------- */
 .essay-list { display: flex; flex-direction: column; gap: 10px; }
 .essay-card {
@@ -425,7 +437,7 @@ input, textarea, select {
   background: var(--accent-soft); font-weight: 600; font-size: 12.5px;
 }
 .editor-toolbar--insert {
-  border-radius: 0; border-top: none; top: 47px; gap: 8px;
+  border-radius: 0; border-top: none; top: 47px; gap: 8px; flex-wrap: wrap; height: auto;
 }
 .editor-toolbar--insert button {
   width: auto; padding: 0 10px 0 8px; gap: 6px; font-size: 12px; font-weight: 600;

@@ -179,6 +179,7 @@ function renderEditor(container, summaryId) {
       <button data-insert="code" title="Código">${Icon("code", { size: 15 })}<span>Código</span></button>
       <button data-insert="callout" title="Caixa de destaque">${Icon("lightbulb", { size: 15 })}<span>Destaque</span></button>
       <button data-insert="columns" title="Colunas">${Icon("columns", { size: 15 })}<span>Colunas</span></button>
+      <button data-insert="clinicalCase" title="Caso clínico">${Icon("pulse", { size: 15 })}<span>Caso clínico</span></button>
     </div>
     <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"}" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
@@ -249,6 +250,15 @@ function renderEditor(container, summaryId) {
     callout: () =>
       `<div class="callout"><span class="callout-icon">${Icon("lightbulb", { size: 15 })}</span><span class="callout-text">Escreva aqui uma observação importante...</span></div><p><br></p>`,
     columns: () => `<div class="columns"><div class="column"><p>Coluna 1</p></div><div class="column"><p>Coluna 2</p></div></div><p><br></p>`,
+    clinicalCase: () =>
+      `<div class="clinical-case">` +
+      `<div class="cc-header">${Icon("pulse", { size: 14 })}<span>Caso clínico</span></div>` +
+      `<div class="cc-field"><label>Identificação</label><p>Paciente, idade, sexo, comorbidades...</p></div>` +
+      `<div class="cc-field"><label>Queixa principal</label><p>...</p></div>` +
+      `<div class="cc-field"><label>História da doença atual</label><p>...</p></div>` +
+      `<div class="cc-field"><label>Exame físico</label><p>...</p></div>` +
+      `<div class="cc-field"><label>Hipótese diagnóstica / Conduta</label><p>...</p></div>` +
+      `</div><p><br></p>`,
   };
   container.querySelectorAll("[data-insert]").forEach((btn) => {
     btn.addEventListener("mousedown", (e) => e.preventDefault());

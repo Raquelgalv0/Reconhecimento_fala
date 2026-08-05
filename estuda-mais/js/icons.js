@@ -39,6 +39,7 @@ const PATHS = {
   award: '<circle cx="12" cy="8.8" r="5.3"/><path d="M9 13.3 7.3 21l4.7-2.4L16.7 21 15 13.3"/>',
   upload: '<path d="M12 15.5V4.5"/><path d="M7.5 9 12 4.5 16.5 9"/><path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/>',
   mindMap: '<circle cx="12" cy="6" r="2.3"/><circle cx="5" cy="18" r="2.3"/><circle cx="19" cy="18" r="2.3"/><path d="M12 8.3v4"/><path d="M12 12.3 5 15.9"/><path d="M12 12.3 19 15.9"/>',
+  pulse: '<path d="M3 12h3.5l1.8-5 3 10 2.2-8.5 1.5 3.5H21"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {
