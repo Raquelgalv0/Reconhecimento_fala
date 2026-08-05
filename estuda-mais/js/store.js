@@ -95,6 +95,8 @@ function seedState() {
       },
     ],
     ...seedQuestionData(folderControle, folderDengue),
+    dailyGoal: 10,
+    dailyLog: seedDailyLog(),
     ui: {
       route: "dashboard",
       activeFolderId: null,
@@ -208,6 +210,37 @@ function seedQuestionData(folderControle, folderDengue) {
   ];
 
   return { questions, questionAttempts: attempts };
+}
+
+function dayKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function seedDailyLog() {
+  // últimos 14 dias, com um dia sem atividade no meio para demonstrar a
+  // diferença entre a sequência atual e a melhor sequência já alcançada.
+  const days = [
+    { n: 13, total: 5, correct: 3, minutes: 14 },
+    { n: 12, total: 7, correct: 5, minutes: 18 },
+    { n: 11, total: 6, correct: 5, minutes: 16 },
+    { n: 10, total: 8, correct: 6, minutes: 20 },
+    { n: 9, total: 9, correct: 7, minutes: 22 },
+    { n: 8, total: 6, correct: 4, minutes: 15 },
+    { n: 7, total: 7, correct: 6, minutes: 17 },
+    { n: 6, total: 0, correct: 0, minutes: 0 },
+    { n: 5, total: 5, correct: 3, minutes: 12 },
+    { n: 4, total: 9, correct: 7, minutes: 20 },
+    { n: 3, total: 7, correct: 6, minutes: 18 },
+    { n: 2, total: 11, correct: 9, minutes: 24 },
+    { n: 1, total: 8, correct: 7, minutes: 19 },
+    { n: 0, total: 6, correct: 5, minutes: 10 },
+  ];
+  const log = {};
+  for (const d of days) {
+    const date = new Date(Date.now() - d.n * 86400000);
+    log[dayKey(date)] = { total: d.total, correct: d.correct, minutes: d.minutes };
+  }
+  return log;
 }
 
 function load() {
@@ -415,7 +448,7 @@ class Store {
     const correct = chosenId === question.correctId;
     const attempt = { id: uid("qa"), questionId, chosenId, correct, at: new Date().toISOString() };
     this.state.questionAttempts.push(attempt);
-    this.save();
+    this.logStudyDay({ correct });
     return attempt;
   }
   // Ranking de assuntos: mais cobrados (nº de questões) e com maior taxa de erro.
@@ -451,6 +484,98 @@ class Store {
       .filter(Boolean)
       .sort((a, b) => b.count - a.count)
       .slice(0, limit);
+  }
+
+  // ---- Desempenho ----
+  logStudyDay({ correct, minutes = 0 } = {}) {
+    const key = dayKey(new Date());
+    const day = this.state.dailyLog[key] || (this.state.dailyLog[key] = { total: 0, correct: 0, minutes: 0 });
+    if (correct !== undefined && correct !== null) {
+      day.total += 1;
+      if (correct) day.correct += 1;
+    }
+    if (minutes) day.minutes += minutes;
+    this.save();
+  }
+  addStudyMinutes(n) {
+    this.logStudyDay({ minutes: n });
+  }
+  last14Days() {
+    const out = [];
+    for (let n = 13; n >= 0; n--) {
+      const date = new Date(Date.now() - n * 86400000);
+      const key = dayKey(date);
+      const day = this.state.dailyLog[key] || { total: 0, correct: 0, minutes: 0 };
+      out.push({ date: key, ...day, accuracy: day.total ? Math.round((day.correct / day.total) * 100) : 0 });
+    }
+    return out;
+  }
+  currentStreak() {
+    let streak = 0;
+    for (let n = 0; ; n++) {
+      const key = dayKey(new Date(Date.now() - n * 86400000));
+      const day = this.state.dailyLog[key];
+      if (day && day.total > 0) streak++;
+      else break;
+    }
+    return streak;
+  }
+  bestStreak() {
+    const keys = Object.keys(this.state.dailyLog)
+      .filter((k) => this.state.dailyLog[k].total > 0)
+      .sort();
+    let best = 0;
+    let current = 0;
+    let prevTime = null;
+    for (const k of keys) {
+      const t = new Date(k + "T00:00:00").getTime();
+      if (prevTime !== null && t - prevTime === 86400000) current += 1;
+      else current = 1;
+      best = Math.max(best, current);
+      prevTime = t;
+    }
+    return Math.max(best, this.currentStreak());
+  }
+  totalStudyMinutes() {
+    return Object.values(this.state.dailyLog).reduce((sum, d) => sum + (d.minutes || 0), 0);
+  }
+  overallAccuracy() {
+    const totals = Object.values(this.state.dailyLog).reduce(
+      (acc, d) => ({ total: acc.total + d.total, correct: acc.correct + d.correct }),
+      { total: 0, correct: 0 }
+    );
+    return totals.total ? Math.round((totals.correct / totals.total) * 100) : null;
+  }
+  bestDay() {
+    const entries = Object.entries(this.state.dailyLog).filter(([, d]) => d.total > 0);
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => b[1].correct - a[1].correct);
+    return { date: entries[0][0], ...entries[0][1] };
+  }
+  setDailyGoal(n) {
+    this.state.dailyGoal = Math.max(1, Math.round(n));
+    this.save();
+  }
+  todayProgress() {
+    const key = dayKey(new Date());
+    const day = this.state.dailyLog[key] || { total: 0 };
+    return { done: day.total, goal: this.state.dailyGoal };
+  }
+  // Combina flashcards (último resultado) e questões (tentativas) por assunto,
+  // para achar assuntos mais errados e assuntos dominados.
+  topicMasteryStats() {
+    return this.flattenFolders()
+      .map((f) => {
+        const cards = this.cardsInFolder(f.id).filter((c) => c.srs.lastResult);
+        const cardsWrong = cards.filter((c) => c.srs.lastResult === "errou").length;
+        const questions = this.questionsInFolder(f.id);
+        const attempts = questions.flatMap((q) => this.attemptsForQuestion(q.id));
+        const qWrong = attempts.filter((a) => !a.correct).length;
+        const total = cards.length + attempts.length;
+        const wrong = cardsWrong + qWrong;
+        return { folderId: f.id, name: f.name, path: this.folderPath(f.id), total, errorRate: total ? wrong / total : 0 };
+      })
+      .filter((s) => s.total > 0);
   }
 
   setOnboarded(modes) {

@@ -302,6 +302,7 @@ function renderReview(container, deckId) {
   const grade = (result) => {
     scheduleNext(card, result);
     store.updateFlashcard(card.id, { srs: card.srs });
+    store.logStudyDay({ correct: result === "acertou" });
     session.index++;
   };
   container.querySelector("#btn-errei").addEventListener("click", (e) => {

@@ -35,6 +35,10 @@ const PATHS = {
   layout: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17"/><path d="M9.7 9.5v11"/>',
   star: '<path d="M12 3.5 14.6 9 20.5 9.8 16.2 13.8 17.3 19.6 12 16.7 6.7 19.6 7.8 13.8 3.5 9.8 9.4 9z"/>',
   helpCircle: '<circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.3a2.5 2.5 0 0 1 4.8 .9c0 1.6-2.3 1.9-2.3 3.4"/><circle cx="12" cy="16.7" r="0.9" fill="currentColor" stroke="none"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/>',
+  award: '<circle cx="12" cy="8.8" r="5.3"/><path d="M9 13.3 7.3 21l4.7-2.4L16.7 21 15 13.3"/>',
+  upload: '<path d="M12 15.5V4.5"/><path d="M7.5 9 12 4.5 16.5 9"/><path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/>',
+  mindMap: '<circle cx="12" cy="6" r="2.3"/><circle cx="5" cy="18" r="2.3"/><circle cx="19" cy="18" r="2.3"/><path d="M12 8.3v4"/><path d="M12 12.3 5 15.9"/><path d="M12 12.3 19 15.9"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {

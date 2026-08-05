@@ -3,6 +3,7 @@ import { renderDashboard } from "./views/dashboard.js";
 import { renderResumos } from "./views/resumos.js";
 import { renderFlashcards } from "./views/flashcards.js";
 import { renderQuestoes } from "./views/questoes.js";
+import { renderDesempenho } from "./views/desempenho.js";
 import { Icon } from "./icons.js";
 
 const MODES = [
@@ -76,6 +77,13 @@ function renderShell() {
 
   store.subscribe(safeRender);
   safeRender();
+
+  if (!window.__studyTimerStarted) {
+    window.__studyTimerStarted = true;
+    setInterval(() => {
+      if (document.visibilityState === "visible") store.addStudyMinutes(1);
+    }, 60000);
+  }
 }
 
 function renderMain(mainEl) {
@@ -83,6 +91,7 @@ function renderMain(mainEl) {
   if (route === "resumos") return renderResumos(mainEl);
   if (route === "flashcards") return renderFlashcards(mainEl);
   if (route === "questoes") return renderQuestoes(mainEl);
+  if (route === "desempenho") return renderDesempenho(mainEl);
   return renderDashboard(mainEl);
 }
 
@@ -102,6 +111,7 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">${Icon("fileText")}<span>Resumos</span></button>
       <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
+      <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
     </div>
 
     <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
@@ -127,6 +137,7 @@ function renderSidebar(sidebarEl) {
       if (target === "resumos") store.setRoute("resumos", { activeSummaryId: null, activeFolderId: null });
       else if (target === "flashcards") store.setRoute("flashcards", { activeDeckId: null, reviewing: false });
       else if (target === "questoes") store.setRoute("questoes", { activeQuestionFolderId: null, questionFilter: "all", practicing: false });
+      else if (target === "desempenho") store.setRoute("desempenho");
       else store.setRoute("dashboard");
     });
   });
