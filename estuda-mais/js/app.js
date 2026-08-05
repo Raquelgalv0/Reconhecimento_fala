@@ -302,6 +302,15 @@ function openProfileModal() {
         ${TIME_OPTIONS.map((t) => `<button type="button" class="btn btn-sm ${p.dailyTimeMinutes === t.value ? "btn-primary" : "btn-ghost"}" data-time="${t.value}">${t.label}</button>`).join("")}
       </div>
     </div>
+    <div class="field">
+      <label>Backup dos dados</label>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="export-data">${Icon("download", { size: 13 })}<span>Exportar</span></button>
+        <button type="button" class="btn btn-ghost btn-sm" id="import-data-btn">${Icon("upload", { size: 13 })}<span>Importar</span></button>
+        <input type="file" id="import-data-file" accept="application/json" style="display:none" />
+      </div>
+      <div class="field-hint">Seus dados ficam só neste navegador — exporte de vez em quando para não perder nada.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>
       <button class="btn btn-primary" id="save-profile">Salvar</button>
@@ -319,6 +328,34 @@ function openProfileModal() {
             btn.classList.remove("btn-ghost");
             btn.classList.add("btn-primary");
           });
+        });
+        modal.querySelector("#export-data").addEventListener("click", () => {
+          const json = store.exportData();
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `estuda-mais-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast("Backup exportado.");
+        });
+        const importInput = modal.querySelector("#import-data-file");
+        modal.querySelector("#import-data-btn").addEventListener("click", () => importInput.click());
+        importInput.addEventListener("change", () => {
+          const file = importInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              store.importData(String(reader.result || ""));
+              showToast("Dados importados! Recarregando...");
+              setTimeout(() => location.reload(), 600);
+            } catch (e) {
+              showToast("Arquivo de backup inválido.", "alertCircle");
+            }
+          };
+          reader.readAsText(file);
         });
         modal.querySelector("#cancel").addEventListener("click", closeModal);
         modal.querySelector("#save-profile").addEventListener("click", () => {

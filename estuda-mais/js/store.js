@@ -660,6 +660,19 @@ class Store {
     this.save();
   }
 
+  // ---- Backup (os dados só existem neste navegador) ----
+  exportData() {
+    return JSON.stringify(this.state, null, 2);
+  }
+  importData(json) {
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.folders) || !Array.isArray(parsed.summaries)) {
+      throw new Error("Arquivo de backup inválido.");
+    }
+    this.state = parsed;
+    this.save();
+  }
+
   setRoute(route, extra = {}) {
     this.state.ui = { ...this.state.ui, route, ...extra };
     this.save();
