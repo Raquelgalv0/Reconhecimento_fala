@@ -354,6 +354,34 @@ input, textarea, select {
   content: ""; position: absolute; top: -10px; left: 50%; width: 1px; height: 10px; background: var(--border);
 }
 
+/* ---------- Redação ENEM ---------- */
+.essay-list { display: flex; flex-direction: column; gap: 10px; }
+.essay-card {
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.essay-card:hover { box-shadow: var(--shadow-1); border-color: #d6d1f5; }
+.essay-body { flex: 1; min-width: 0; }
+.essay-title { margin: 0 0 3px; font-weight: 600; font-size: 14px; }
+.essay-theme { margin: 0 0 4px; font-size: 12.5px; color: var(--ink-soft); }
+.essay-score { text-align: center; flex-shrink: 0; }
+.essay-score-num { font-family: var(--font-serif); font-size: 22px; color: var(--accent); line-height: 1; }
+.essay-score-unit { font-size: 10px; color: var(--ink-faint); }
+
+.essay-result-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.essay-total { text-align: center; flex-shrink: 0; }
+.essay-total-num { font-family: var(--font-serif); font-size: 40px; color: var(--accent); line-height: 1; }
+.essay-total-unit { font-size: 11px; color: var(--ink-faint); }
+
+.comp-card { margin-bottom: 0; }
+.comp-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 8px; gap: 8px; }
+.comp-head span { color: var(--ink-soft); font-weight: 700; flex-shrink: 0; }
+.comp-feedback { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 0; line-height: 1.5; }
+.comp-good { background: var(--green); }
+.comp-mid { background: var(--amber); }
+.comp-low { background: var(--red); }
+
 /* ---------- Resumos ---------- */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .summary-card {
