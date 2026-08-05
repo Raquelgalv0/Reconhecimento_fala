@@ -10,16 +10,34 @@ externas), então roda em qualquer navegador sem `npm install`.
 
 ## Rodando localmente
 
+**Com IA real (Groq)** — recomendado, requer Node.js 18+:
+
+```bash
+cd estuda-mais
+cp .env.local.example .env.local
+# edite .env.local e cole sua GROQ_API_KEY
+node server.js
+# abra http://localhost:8000
+```
+
+O arquivo `.env.local` nunca é commitado (está no `.gitignore`) — a chave fica
+só no seu computador, e só o `server.js` (rodando no seu próprio computador)
+fala com a Groq. O navegador nunca vê a chave.
+
+**Sem IA (só para navegar pela interface)**, sem precisar de Node:
+
 ```bash
 cd estuda-mais
 python3 -m http.server 8080
 # abra http://localhost:8080
 ```
 
-Ou simplesmente abra `index.html` diretamente no navegador.
+Nesse modo, tudo funciona normalmente exceto os botões de geração por IA
+("Gerar com IA", "Sugerir comentário", "Processar com IA" no Upload), que
+mostram um aviso pedindo para rodar via `node server.js`.
 
-Os dados (pastas, resumos, flashcards e progresso de revisão) ficam salvos no
-`localStorage` do navegador — não há backend nesta fase.
+Os dados (pastas, resumos, flashcards, questões e progresso) ficam salvos no
+`localStorage` do navegador — não há banco de dados nesta fase.
 
 ## O que está implementado
 
@@ -29,8 +47,7 @@ Os dados (pastas, resumos, flashcards e progresso de revisão) ficam salvos no
   entre Resumos e Flashcards — o mesmo assunto vira o mesmo baralho.
 - **Resumos**: editor rico (contentEditable) com título, formatação
   (negrito, itálico, títulos, citação, lista, destaque, link, imagem),
-  organização por pasta e geração assistida por "IA" (simulada localmente
-  nesta fase — a interface já está pronta para plugar um modelo real depois).
+  organização por pasta e geração assistida por IA real (Groq, via `server.js`).
 - **Sincronização Resumo → Flashcard**: ao selecionar um trecho do resumo,
   aparece uma barra flutuante com a opção "✨ Criar Flashcard". O app sugere
   pergunta/resposta a partir do trecho, o usuário revisa e salva — o
@@ -63,7 +80,7 @@ estuda-mais/
     app.js          # shell, onboarding, sidebar, roteamento
     store.js         # estado + persistência em localStorage
     srs.js            # regra de revisão espaçada
-    ai.js               # geração de resumo/flashcard "IA" (mock local)
+    ai.js               # chama a IA (Groq) via /api/ai do server.js
     ui-utils.js          # toast, modal, helpers de formatação
     views/
       dashboard.js

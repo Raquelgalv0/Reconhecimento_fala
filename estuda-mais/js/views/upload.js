@@ -155,7 +155,7 @@ function wireForm(container) {
     reader.readAsText(file);
   });
 
-  container.querySelector("#process-btn").addEventListener("click", () => {
+  container.querySelector("#process-btn").addEventListener("click", async () => {
     const text = sourceEl.value.trim();
     if (text.length < 40) {
       showToast("Cole um texto mais completo (mínimo de 40 caracteres).", "alertCircle");
@@ -176,17 +176,27 @@ function wireForm(container) {
       return;
     }
 
-    lastResult = {
-      title,
-      folderId,
-      summaryHtml: wantResumo ? generateSummaryFromText(text) : null,
-      flashcards: wantFlashcards ? generateFlashcardsFromText(text, countFlashcards) : null,
-      questions: wantQuestoes ? generateQuestionsFromText(text, countQuestoes) : null,
-      checklist: wantChecklist ? generateChecklistFromText(text) : null,
-      mindmap: wantMindmap ? generateMindMapFromText(text, title) : null,
-    };
-    showToast("Material processado! Revise antes de salvar.", "sparkles");
-    renderUpload(container);
+    const btn = container.querySelector("#process-btn");
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `${Icon("sparkles", { size: 14 })}<span>Processando com IA...</span>`;
+
+    try {
+      const [summaryHtml, flashcards, questions, checklist, mindmap] = await Promise.all([
+        wantResumo ? generateSummaryFromText(text) : Promise.resolve(null),
+        wantFlashcards ? generateFlashcardsFromText(text, countFlashcards) : Promise.resolve(null),
+        wantQuestoes ? generateQuestionsFromText(text, countQuestoes) : Promise.resolve(null),
+        wantChecklist ? generateChecklistFromText(text) : Promise.resolve(null),
+        wantMindmap ? generateMindMapFromText(text, title) : Promise.resolve(null),
+      ]);
+      lastResult = { title, folderId, summaryHtml, flashcards, questions, checklist, mindmap };
+      showToast("Material processado! Revise antes de salvar.", "sparkles");
+      renderUpload(container);
+    } catch (err) {
+      showToast(err.message, "alertCircle");
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
   });
 }
 

@@ -363,7 +363,6 @@ function setupSelectionToolbar(editorBody, summary) {
 }
 
 function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, mark }) {
-  const suggestion = suggestFlashcardFromSelection(selectedText);
   const deckName = store.folderPath(summary.folderId);
 
   const unwrapPending = () => {
@@ -379,14 +378,14 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
   openModal(
     `
     <h3>${Icon("sparkles", { size: 16 })} Criar flashcard a partir do trecho</h3>
-    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Sugestão gerada automaticamente a partir do texto selecionado. Revise antes de salvar.</span></div>
+    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Sugestão gerada por IA (Groq) a partir do texto selecionado. Revise antes de salvar.</span></div>
     <div class="field">
       <label>Frente (pergunta)</label>
-      <textarea id="f-front">${escapeAttr(suggestion.front)}</textarea>
+      <textarea id="f-front" disabled placeholder="Gerando sugestão com IA..."></textarea>
     </div>
     <div class="field">
       <label>Verso (resposta)</label>
-      <textarea id="f-back">${escapeAttr(suggestion.back)}</textarea>
+      <textarea id="f-back" disabled placeholder="Gerando sugestão com IA..."></textarea>
     </div>
     <div class="field">
       <label>Dica (assunto / baralho)</label>
@@ -395,14 +394,32 @@ function openCreateFlashcardModal({ editorBody, summary, selectedText, tempId, m
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>
-      <button class="btn btn-primary" id="confirm">Salvar e sincronizar</button>
+      <button class="btn btn-primary" id="confirm" disabled>Salvar e sincronizar</button>
     </div>`,
     {
-      onMount: (modal) => {
+      onMount: async (modal) => {
+        const frontEl = modal.querySelector("#f-front");
+        const backEl = modal.querySelector("#f-back");
+        const confirmBtn = modal.querySelector("#confirm");
+
         modal.querySelector("#cancel").addEventListener("click", () => {
           unwrapPending();
           closeModal();
         });
+
+        try {
+          const suggestion = await suggestFlashcardFromSelection(selectedText);
+          frontEl.value = suggestion.front;
+          backEl.value = suggestion.back;
+        } catch (err) {
+          showToast(err.message, "alertCircle");
+          backEl.value = selectedText;
+        } finally {
+          frontEl.disabled = false;
+          backEl.disabled = false;
+          confirmBtn.disabled = false;
+        }
+
         modal.querySelector("#confirm").addEventListener("click", () => {
           const front = modal.querySelector("#f-front").value.trim();
           const back = modal.querySelector("#f-back").value.trim();
@@ -431,7 +448,7 @@ function openAiGenerateModal(summaryId, editorBody) {
   openModal(
     `
     <h3>${Icon("sparkles", { size: 16 })} Gerar resumo com IA</h3>
-    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Neste protótipo a geração roda localmente (sem enviar dados para fora) — na versão final chamaria um modelo de linguagem real.</span></div>
+    <div class="ai-source-note">${Icon("lightbulb", { size: 14 })}<span>Isso envia o texto colado para a API da Groq para gerar o resumo.</span></div>
     <div class="field">
       <label>Cole o material (aula, PDF copiado, anotações...)</label>
       <textarea id="f-source" style="min-height:160px" placeholder="Cole aqui o texto-base..."></textarea>
@@ -444,18 +461,27 @@ function openAiGenerateModal(summaryId, editorBody) {
       onMount: (modal) => {
         modal.querySelector("#f-source").focus();
         modal.querySelector("#cancel").addEventListener("click", closeModal);
-        modal.querySelector("#confirm").addEventListener("click", () => {
+        modal.querySelector("#confirm").addEventListener("click", async () => {
           const text = modal.querySelector("#f-source").value.trim();
           if (!text) {
             showToast("Cole um texto para gerar o resumo.", "alertCircle");
             return;
           }
-          const html = generateSummaryFromText(text);
-          const isEmpty = stripHtml(editorBody.innerHTML).length === 0;
-          editorBody.innerHTML = isEmpty ? html : editorBody.innerHTML + "<hr/>" + html;
-          store.updateSummary(summaryId, { contentHtml: editorBody.innerHTML });
-          closeModal();
-          showToast("Resumo gerado com IA (simulado).", "sparkles");
+          const confirmBtn = modal.querySelector("#confirm");
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Gerando...";
+          try {
+            const html = await generateSummaryFromText(text);
+            const isEmpty = stripHtml(editorBody.innerHTML).length === 0;
+            editorBody.innerHTML = isEmpty ? html : editorBody.innerHTML + "<hr/>" + html;
+            store.updateSummary(summaryId, { contentHtml: editorBody.innerHTML });
+            closeModal();
+            showToast("Resumo gerado com IA.", "sparkles");
+          } catch (err) {
+            showToast(err.message, "alertCircle");
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Gerar resumo";
+          }
         });
       },
     }

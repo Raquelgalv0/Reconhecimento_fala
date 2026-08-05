@@ -270,10 +270,26 @@ function openQuestionModal(questionId) {
           renderCorrectOptions();
         });
 
-        modal.querySelector("#q-ai-comment").addEventListener("click", () => {
+        modal.querySelector("#q-ai-comment").addEventListener("click", async () => {
           const correctId = modal.querySelector("#q-correct").value;
           const correctText = alts.find((a) => a.id === correctId)?.text || "";
-          modal.querySelector("#q-comment").value = suggestQuestionComment(modal.querySelector("#q-statement").value, correctText);
+          const statement = modal.querySelector("#q-statement").value.trim();
+          if (!statement || !correctText.trim()) {
+            showToast("Preencha o enunciado e a alternativa correta antes.", "alertCircle");
+            return;
+          }
+          const btn = modal.querySelector("#q-ai-comment");
+          const originalHtml = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = `${Icon("sparkles", { size: 12 })}<span>Gerando...</span>`;
+          try {
+            modal.querySelector("#q-comment").value = await suggestQuestionComment(statement, correctText);
+          } catch (err) {
+            showToast(err.message, "alertCircle");
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+          }
         });
 
         modal.querySelector("#cancel").addEventListener("click", closeModal);
