@@ -2,6 +2,7 @@ import { store } from "./store.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderResumos } from "./views/resumos.js";
 import { renderFlashcards } from "./views/flashcards.js";
+import { renderQuestoes } from "./views/questoes.js";
 import { Icon } from "./icons.js";
 
 const MODES = [
@@ -81,6 +82,7 @@ function renderMain(mainEl) {
   const route = store.state.ui.route;
   if (route === "resumos") return renderResumos(mainEl);
   if (route === "flashcards") return renderFlashcards(mainEl);
+  if (route === "questoes") return renderQuestoes(mainEl);
   return renderDashboard(mainEl);
 }
 
@@ -99,6 +101,7 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "dashboard" ? "active" : ""}" data-nav="dashboard">${Icon("home")}<span>Painel</span></button>
       <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">${Icon("fileText")}<span>Resumos</span></button>
       <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
+      <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
     </div>
 
     <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
@@ -123,6 +126,7 @@ function renderSidebar(sidebarEl) {
       const target = btn.dataset.nav;
       if (target === "resumos") store.setRoute("resumos", { activeSummaryId: null, activeFolderId: null });
       else if (target === "flashcards") store.setRoute("flashcards", { activeDeckId: null, reviewing: false });
+      else if (target === "questoes") store.setRoute("questoes", { activeQuestionFolderId: null, questionFilter: "all", practicing: false });
       else store.setRoute("dashboard");
     });
   });
@@ -133,6 +137,8 @@ function renderSidebar(sidebarEl) {
       const folderId = row.dataset.folder;
       if (store.state.ui.route === "flashcards") {
         store.setRoute("flashcards", { activeDeckId: folderId, reviewing: false });
+      } else if (store.state.ui.route === "questoes") {
+        store.setRoute("questoes", { activeQuestionFolderId: folderId, practicing: false });
       } else {
         store.setRoute("resumos", { activeFolderId: folderId, activeSummaryId: null });
       }

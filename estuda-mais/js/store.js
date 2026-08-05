@@ -94,8 +94,120 @@ function seedState() {
         srs: { ...newSrsState(), stepIndex: 0, dueDate: new Date(Date.now() + 1 * 86400000).toISOString().slice(0, 10) },
       },
     ],
-    ui: { route: "dashboard", activeFolderId: null, activeSummaryId: null, activeDeckId: null, reviewing: false },
+    ...seedQuestionData(folderControle, folderDengue),
+    ui: {
+      route: "dashboard",
+      activeFolderId: null,
+      activeSummaryId: null,
+      activeDeckId: null,
+      reviewing: false,
+      practicing: false,
+      activeQuestionFolderId: null,
+      questionFilter: "all",
+    },
   };
+}
+
+function seedQuestionData(folderControle, folderDengue) {
+  const q1 = uid("q");
+  const q2 = uid("q");
+  const q3 = uid("q");
+  const q4 = uid("q");
+  const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
+
+  const attempts = [
+    { id: uid("qa"), questionId: q1, chosenId: "A", correct: false, at: daysAgo(6) },
+    { id: uid("qa"), questionId: q1, chosenId: "A", correct: false, at: daysAgo(3) },
+    { id: uid("qa"), questionId: q1, chosenId: "C", correct: true, at: daysAgo(1) },
+    { id: uid("qa"), questionId: q2, chosenId: "B", correct: true, at: daysAgo(5) },
+    { id: uid("qa"), questionId: q2, chosenId: "B", correct: true, at: daysAgo(2) },
+    { id: uid("qa"), questionId: q3, chosenId: "A", correct: false, at: daysAgo(4) },
+    { id: uid("qa"), questionId: q3, chosenId: "B", correct: true, at: daysAgo(1) },
+    { id: uid("qa"), questionId: q4, chosenId: "A", correct: false, at: daysAgo(4) },
+    { id: uid("qa"), questionId: q4, chosenId: "A", correct: false, at: daysAgo(2) },
+    { id: uid("qa"), questionId: q4, chosenId: "C", correct: false, at: daysAgo(1) },
+  ];
+
+  const questions = [
+    {
+      id: q1,
+      folderId: folderControle,
+      statement: "Sobre o controle de constitucionalidade, é correto afirmar que:",
+      alternatives: [
+        { id: "A", text: "A ADI pode ser proposta por qualquer cidadão brasileiro." },
+        { id: "B", text: "A ADC tem por objetivo declarar a inconstitucionalidade de uma lei." },
+        { id: "C", text: "O Presidente da República é um dos legitimados para propor ADI." },
+        { id: "D", text: "Decisões em ADI não possuem efeito vinculante." },
+        { id: "E", text: "A ADI só pode ser julgada por tribunais estaduais." },
+      ],
+      correctId: "C",
+      institution: "CESPE/Cebraspe",
+      year: 2022,
+      difficulty: "medio",
+      favorite: false,
+      comment: "A legitimidade para propor ADI está prevista no art. 103 da CF/88 e inclui o Presidente da República, entre outros.",
+      createdAt: daysAgo(6),
+    },
+    {
+      id: q2,
+      folderId: folderControle,
+      statement: "A Ação Declaratória de Constitucionalidade (ADC) tem como principal finalidade:",
+      alternatives: [
+        { id: "A", text: "Revogar uma lei já declarada inconstitucional." },
+        { id: "B", text: "Confirmar a constitucionalidade de uma lei federal diante de controvérsia relevante." },
+        { id: "C", text: "Substituir o controle difuso de constitucionalidade." },
+        { id: "D", text: "Impedir que o Congresso Nacional edite novas leis." },
+        { id: "E", text: "Julgar crimes de responsabilidade do Presidente." },
+      ],
+      correctId: "B",
+      institution: "FGV",
+      year: 2021,
+      difficulty: "facil",
+      favorite: true,
+      comment: null,
+      createdAt: daysAgo(5),
+    },
+    {
+      id: q3,
+      folderId: folderDengue,
+      statement: "Sobre os sintomas clássicos da dengue, assinale a alternativa correta:",
+      alternatives: [
+        { id: "A", text: "Tosse seca persistente é o sintoma mais característico." },
+        { id: "B", text: "Febre alta de início súbito associada a dores musculares e articulares é típica da fase inicial." },
+        { id: "C", text: "A ausência de febre descarta o diagnóstico de dengue." },
+        { id: "D", text: "Manchas vermelhas na pele indicam cura da doença." },
+        { id: "E", text: "A doença não causa dor de cabeça." },
+      ],
+      correctId: "B",
+      institution: "Hospital Sírio-Libanês",
+      year: 2023,
+      difficulty: "medio",
+      favorite: false,
+      comment: null,
+      createdAt: daysAgo(4),
+    },
+    {
+      id: q4,
+      folderId: folderDengue,
+      statement: "São considerados sinais de alarme na dengue, EXCETO:",
+      alternatives: [
+        { id: "A", text: "Dor abdominal intensa e contínua." },
+        { id: "B", text: "Vômitos persistentes." },
+        { id: "C", text: "Sangramento de mucosas." },
+        { id: "D", text: "Queda abrupta da pressão arterial." },
+        { id: "E", text: "Apetite preservado e disposição para atividades físicas." },
+      ],
+      correctId: "E",
+      institution: "SES-SP",
+      year: 2022,
+      difficulty: "dificil",
+      favorite: false,
+      comment: "Sinais de alarme indicam agravamento clínico; apetite preservado é sinal de estabilidade, não de alarme.",
+      createdAt: daysAgo(4),
+    },
+  ];
+
+  return { questions, questionAttempts: attempts };
 }
 
 function load() {
@@ -240,6 +352,105 @@ class Store {
     return this.state.flashcards.filter(
       (c) => c.srs.dueDate <= todayStr && (folderId ? c.folderId === folderId : true)
     );
+  }
+
+  // ---- Questões ----
+  addQuestion(data) {
+    const question = {
+      id: uid("q"),
+      folderId: data.folderId,
+      statement: data.statement,
+      alternatives: data.alternatives,
+      correctId: data.correctId,
+      institution: data.institution || "",
+      year: data.year || null,
+      difficulty: data.difficulty || "medio",
+      favorite: false,
+      comment: data.comment || null,
+      createdAt: new Date().toISOString(),
+    };
+    this.state.questions.push(question);
+    this.save();
+    return question;
+  }
+  updateQuestion(id, patch) {
+    const q = this.state.questions.find((x) => x.id === id);
+    if (!q) return;
+    Object.assign(q, patch);
+    this.save();
+  }
+  deleteQuestion(id) {
+    this.state.questions = this.state.questions.filter((q) => q.id !== id);
+    this.state.questionAttempts = this.state.questionAttempts.filter((a) => a.questionId !== id);
+    this.save();
+  }
+  toggleFavoriteQuestion(id) {
+    const q = this.state.questions.find((x) => x.id === id);
+    if (!q) return;
+    q.favorite = !q.favorite;
+    this.save();
+  }
+  questionsInFolder(folderId) {
+    return this.state.questions.filter((q) => q.folderId === folderId);
+  }
+  favoriteQuestions() {
+    return this.state.questions.filter((q) => q.favorite);
+  }
+  attemptsForQuestion(questionId) {
+    return this.state.questionAttempts.filter((a) => a.questionId === questionId);
+  }
+  lastAttemptForQuestion(questionId) {
+    const attempts = this.attemptsForQuestion(questionId);
+    return attempts.length ? attempts[attempts.length - 1] : null;
+  }
+  wrongQuestions() {
+    return this.state.questions.filter((q) => {
+      const last = this.lastAttemptForQuestion(q.id);
+      return last && !last.correct;
+    });
+  }
+  recordAttempt(questionId, chosenId) {
+    const question = this.state.questions.find((q) => q.id === questionId);
+    if (!question) return null;
+    const correct = chosenId === question.correctId;
+    const attempt = { id: uid("qa"), questionId, chosenId, correct, at: new Date().toISOString() };
+    this.state.questionAttempts.push(attempt);
+    this.save();
+    return attempt;
+  }
+  // Ranking de assuntos: mais cobrados (nº de questões) e com maior taxa de erro.
+  topicQuestionStats() {
+    return this.flattenFolders()
+      .map((f) => {
+        const questions = this.questionsInFolder(f.id);
+        const attempts = questions.flatMap((q) => this.attemptsForQuestion(q.id));
+        const wrong = attempts.filter((a) => !a.correct).length;
+        return {
+          folderId: f.id,
+          name: f.name,
+          path: this.folderPath(f.id),
+          totalQuestions: questions.length,
+          totalAttempts: attempts.length,
+          errorRate: attempts.length ? wrong / attempts.length : 0,
+        };
+      })
+      .filter((s) => s.totalQuestions > 0);
+  }
+  // Alternativas mais confundidas: para cada questão com erros, qual alternativa errada foi mais marcada.
+  confusionRanking(limit = 5) {
+    return this.state.questions
+      .map((q) => {
+        const wrongAttempts = this.attemptsForQuestion(q.id).filter((a) => !a.correct);
+        if (wrongAttempts.length === 0) return null;
+        const tally = {};
+        wrongAttempts.forEach((a) => (tally[a.chosenId] = (tally[a.chosenId] || 0) + 1));
+        const [mostChosenId, count] = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
+        const altText = q.alternatives.find((alt) => alt.id === mostChosenId)?.text || "";
+        return { questionId: q.id, statement: q.statement, mostChosenId, count, altText, folderId: q.folderId };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
   }
 
   setOnboarded(modes) {

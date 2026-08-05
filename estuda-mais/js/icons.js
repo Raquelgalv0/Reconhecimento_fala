@@ -33,6 +33,8 @@ const PATHS = {
   code: '<path d="M9 8l-4.2 4 4.2 4"/><path d="M15 8l4.2 4-4.2 4"/>',
   columns: '<rect x="4" y="4.5" width="7" height="15" rx="1.5"/><rect x="13" y="4.5" width="7" height="15" rx="1.5"/>',
   layout: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17"/><path d="M9.7 9.5v11"/>',
+  star: '<path d="M12 3.5 14.6 9 20.5 9.8 16.2 13.8 17.3 19.6 12 16.7 6.7 19.6 7.8 13.8 3.5 9.8 9.4 9z"/>',
+  helpCircle: '<circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.3a2.5 2.5 0 0 1 4.8 .9c0 1.6-2.3 1.9-2.3 3.4"/><circle cx="12" cy="16.7" r="0.9" fill="currentColor" stroke="none"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {

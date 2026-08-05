@@ -50,3 +50,12 @@ export function suggestFlashcardFromSelection(selectionText) {
   }
   return { front, back };
 }
+
+// Sugere um comentário explicativo para uma questão, a partir do enunciado e
+// do texto da alternativa correta (heurística local — sem chamada externa).
+export function suggestQuestionComment(statement, correctText) {
+  const cleanCorrect = (correctText || "").trim().replace(/\s+/g, " ");
+  const subject = statement.trim().replace(/\s+/g, " ").slice(0, 90);
+  if (!cleanCorrect) return `Revise o conceito central de "${subject}" no seu resumo antes de tentar novamente.`;
+  return `A alternativa correta é a que afirma: "${cleanCorrect}". Releia esse ponto no seu resumo sobre o assunto para fixar o porquê das demais estarem erradas.`;
+}

@@ -229,6 +229,73 @@ input, textarea, select {
 }
 .priority-item .txt b { display: block; margin-bottom: 1px; }
 .priority-item .txt span { color: var(--ink-soft); font-size: 12.5px; }
+.stat-grid--3 { grid-template-columns: repeat(3, 1fr); }
+.muted-note { font-size: 12.5px; color: var(--ink-faint); margin: 0; }
+
+/* ---------- Questões ---------- */
+.question-list { display: flex; flex-direction: column; gap: 10px; }
+.question-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; cursor: pointer; transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.question-card:hover { box-shadow: var(--shadow-1); border-color: #d6d1f5; }
+.q-star {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  color: var(--ink-faint); margin-top: 1px;
+}
+.q-star:hover { background: var(--accent-soft); color: var(--accent); }
+.q-star.active { color: var(--amber); }
+.q-star.active svg { fill: var(--amber); }
+.q-body { flex: 1; min-width: 0; }
+.q-statement { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+.q-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.q-tag {
+  font-size: 11px; font-weight: 600; color: var(--ink-soft); background: var(--bg);
+  border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px;
+}
+.q-tag.diff-facil { color: var(--green); background: var(--green-soft); border-color: transparent; }
+.q-tag.diff-medio { color: var(--amber); background: var(--amber-soft); border-color: transparent; }
+.q-tag.diff-dificil { color: var(--red); background: var(--red-soft); border-color: transparent; }
+.q-status { font-size: 11px; color: var(--ink-faint); display: inline-flex; align-items: center; gap: 3px; margin-left: auto; }
+.q-status.ok { color: var(--green); font-weight: 600; }
+.q-status.bad { color: var(--red); font-weight: 600; }
+
+/* question modal */
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+.alt-row input { margin-bottom: 0; }
+
+/* practice session */
+.practice-stage { max-width: 640px; margin: 0 auto; }
+.practice-card {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px 26px; box-shadow: var(--shadow-1);
+}
+.practice-statement { font-size: 17px; line-height: 1.6; margin: 0 0 20px; }
+.practice-alts { display: flex; flex-direction: column; gap: 10px; }
+.practice-alt {
+  display: flex; align-items: flex-start; gap: 12px; text-align: left;
+  border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 14px;
+}
+.practice-alt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.practice-alt:disabled { cursor: default; }
+.practice-alt .alt-letter {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--bg);
+  border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--ink-soft);
+}
+.practice-alt.correct { border-color: var(--green); background: var(--green-soft); }
+.practice-alt.correct .alt-letter { border-color: var(--green); background: var(--green); color: #fff; }
+.practice-alt.wrong { border-color: var(--red); background: var(--red-soft); }
+.practice-alt.wrong .alt-letter { border-color: var(--red); background: var(--red); color: #fff; }
+.practice-feedback {
+  display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 14px;
+  border-radius: 10px; font-size: 13.5px; font-weight: 600;
+}
+.practice-feedback.ok { background: var(--green-soft); color: var(--green); }
+.practice-feedback.bad { background: var(--red-soft); color: var(--red); }
+.practice-card .ai-source-note { margin-top: 14px; margin-bottom: 0; }
 
 /* ---------- Resumos ---------- */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
