@@ -2,7 +2,7 @@
 
 Este documento descreve como transformar o protótipo estático atual (HTML/CSS/JS puro, dados só no `localStorage` do navegador) em um produto real, com backend, banco de dados seguro, backup e contas de usuário.
 
-> **Status atual**: banco de dados real (item 1), autenticação (item 2), IA (item 3) e hospedagem na Vercel (item 6) **já estão implementados** — veja `supabase/schema.sql`, `js/auth.js`, `js/db.js`, `server.js`, `lib/groq.js`, `api/ai.js` e o `README.md`. O que falta: upload de PDF/Word (item 4), pagamento (item 5), e sincronizar de volta pro banco o que é restaurado via "Importar backup".
+> **Status atual**: banco de dados real (item 1), autenticação (item 2), IA (item 3) e hospedagem na Vercel (item 6) **já estão implementados** — veja `supabase/schema.sql`, `js/auth.js`, `js/db.js`, `server.js`, `lib/groq.js`, `api/ai.js` e o `README.md`. Importar/exportar backup também já sincroniza com o banco. O que falta: upload de PDF/Word (item 4) e pagamento (item 5).
 
 ## Stack alvo
 

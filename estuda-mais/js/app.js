@@ -465,18 +465,23 @@ function openProfileModal() {
           showToast("Backup exportado.");
         });
         const importInput = modal.querySelector("#import-data-file");
-        modal.querySelector("#import-data-btn").addEventListener("click", () => importInput.click());
+        const importBtn = modal.querySelector("#import-data-btn");
+        importBtn.addEventListener("click", () => importInput.click());
         importInput.addEventListener("change", () => {
           const file = importInput.files[0];
           if (!file) return;
           const reader = new FileReader();
-          reader.onload = () => {
+          reader.onload = async () => {
+            importBtn.disabled = true;
+            const originalHtml = importBtn.innerHTML;
+            importBtn.innerHTML = `${Icon("upload", { size: 13 })}<span>Importando...</span>`;
             try {
-              store.importData(String(reader.result || ""));
-              showToast("Dados importados! Recarregando...");
+              await store.importData(String(reader.result || ""));
               setTimeout(() => location.reload(), 600);
             } catch (e) {
-              showToast("Arquivo de backup inválido.", "alertCircle");
+              showToast(e.message || "Arquivo de backup inválido.", "alertCircle");
+              importBtn.disabled = false;
+              importBtn.innerHTML = originalHtml;
             }
           };
           reader.readAsText(file);

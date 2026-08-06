@@ -614,18 +614,79 @@ class Store {
     ).catch((err) => reportSyncError("salvar seu perfil", err));
   }
 
-  // ---- Backup (exporta/importa o estado local; não sincroniza com a nuvem) ----
+  // ---- Backup ----
   exportData() {
     return JSON.stringify(this.state, null, 2);
   }
-  importData(json) {
+  // Substitui TUDO (local e na nuvem) pelo conteúdo do backup. Apaga as
+  // tabelas do usuário e reinsere na ordem que respeita as dependências
+  // entre elas (pastas antes de resumos/flashcards/questões, questões antes
+  // das tentativas) — evita erro de chave estrangeira durante a reinserção.
+  async syncFullReplace() {
+    if (!this.userId || !this.session) throw new Error("Sem sessão ativa.");
+    const s = this.state;
+    const { session, userId } = this;
+
+    // Um flashcard pode apontar para um resumo já excluído (o app permite
+    // isso hoje) — sem essa limpeza, a reinserção quebraria por causa da
+    // chave estrangeira. O mesmo vale para tentativas de questões que não
+    // vieram junto no backup.
+    const summaryIds = new Set(s.summaries.map((x) => x.id));
+    const questionIds = new Set(s.questions.map((x) => x.id));
+    const safeCards = s.flashcards.map((c) => (c.summaryId && !summaryIds.has(c.summaryId) ? { ...c, summaryId: null } : c));
+    const safeAttempts = s.questionAttempts.filter((a) => questionIds.has(a.questionId));
+
+    await db.deleteRow("question_attempts", userId, session, "user_id");
+    await db.deleteRow("questions", userId, session, "user_id");
+    await db.deleteRow("flashcards", userId, session, "user_id");
+    await db.deleteRow("summaries", userId, session, "user_id");
+    await db.deleteRow("folders", userId, session, "user_id");
+    await db.deleteRow("daily_log", userId, session, "user_id");
+
+    if (s.folders.length) await db.insertRow("folders", s.folders.map((f) => mapFolder.toDb(f, userId)), session);
+    if (s.summaries.length) await db.insertRow("summaries", s.summaries.map((x) => mapSummary.toDb(x, userId)), session);
+    if (safeCards.length) await db.insertRow("flashcards", safeCards.map((x) => mapCard.toDb(x, userId)), session);
+    if (s.questions.length) await db.insertRow("questions", s.questions.map((x) => mapQuestion.toDb(x, userId)), session);
+    if (safeAttempts.length) await db.insertRow("question_attempts", safeAttempts.map((x) => mapAttempt.toDb(x, userId)), session);
+
+    const dailyRows = Object.entries(s.dailyLog || {}).map(([day, d]) => ({
+      user_id: userId,
+      day,
+      total: d.total || 0,
+      correct: d.correct || 0,
+      minutes: d.minutes || 0,
+    }));
+    if (dailyRows.length) await db.insertRow("daily_log", dailyRows, session);
+
+    await db.upsertRow(
+      "profiles",
+      {
+        id: userId,
+        modes: s.modes || [],
+        name: s.profile?.name || "",
+        study_area: s.profile?.studyArea || "",
+        level: s.profile?.level || "",
+        daily_time_minutes: s.profile?.dailyTimeMinutes ?? null,
+        onboarded: !!s.onboarded,
+        daily_goal: s.dailyGoal || 10,
+      },
+      session,
+      "id"
+    );
+  }
+  async importData(json) {
     const parsed = JSON.parse(json);
     if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.folders) || !Array.isArray(parsed.summaries)) {
       throw new Error("Arquivo de backup inválido.");
     }
     this.state = parsed;
     this.save();
-    showToast("Backup importado neste navegador. Edite algo em cada área para sincronizar de volta com a nuvem.", "alertCircle");
+    try {
+      await this.syncFullReplace();
+      showToast("Backup importado e sincronizado com a nuvem.", "check");
+    } catch (err) {
+      showToast(`Backup importado neste navegador, mas falhou ao sincronizar com a nuvem: ${err.message}`, "alertCircle");
+    }
   }
 
   setRoute(route, extra = {}) {

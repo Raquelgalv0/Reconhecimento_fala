@@ -62,9 +62,13 @@ flashcard, responder questão etc.) atualiza a tela na hora e, em paralelo,
 salva no banco — se a gravação falhar (sem internet, por exemplo), aparece um
 aviso e a ação continua válida localmente até conseguir sincronizar de novo.
 
-**Limitação atual**: o botão "Importar backup" (JSON) ainda só restaura os
-dados neste navegador — não empurra o conteúdo importado de volta pro banco
-automaticamente.
+O botão "Importar backup" (JSON) também sincroniza com a nuvem: ele apaga os
+dados atuais da sua conta no banco e reinsere tudo a partir do arquivo
+importado, na ordem que respeita as dependências entre pastas, resumos,
+flashcards e questões. Se a sincronização falhar (sem internet, por exemplo),
+o backup continua importado neste navegador e um aviso explica o que não
+sincronizou — nada é perdido, e um novo salvamento em qualquer tela tenta de
+novo.
 
 ## Publicando num site (link público)
 
