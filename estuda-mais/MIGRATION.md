@@ -1,8 +1,8 @@
 # Roteiro de migração — do protótipo ao SaaS real
 
-Este documento descreve como transformar o protótipo estático atual (HTML/CSS/JS puro, dados só no `localStorage` do navegador, IA simulada por regras) em um produto real, com backend, banco de dados seguro, backup e uma API de IA de verdade.
+Este documento descreve como transformar o protótipo estático atual (HTML/CSS/JS puro, dados só no `localStorage` do navegador) em um produto real, com backend, banco de dados seguro, backup e contas de usuário.
 
-> **Contexto**: o protótipo em `estuda-mais/` foi construído num ambiente sem acesso à internet, por isso não usa framework, backend nem IA real. Ele serve para validar a experiência de uso (UX) e o conjunto de funcionalidades. A migração abaixo deve ser feita num ambiente com acesso à internet.
+> **Status atual**: a etapa de IA (item 3 abaixo) e o caminho de hospedagem na Vercel (item 6) **já estão implementados** — veja `server.js`, `lib/groq.js`, `api/ai.js` e a seção "Publicando num site" do `README.md`. O que falta é o restante: banco de dados real (item 1), login (item 2), upload de PDF/Word (item 4) e pagamento (item 5) — hoje os dados continuam só no `localStorage` de cada navegador, sem conta de usuário nem cobrança.
 
 ## Stack alvo
 
@@ -36,7 +36,7 @@ Cada tabela leva `user_id` + política de RLS restringindo `auth.uid() = user_id
 
 Trocar o onboarding atual (que só salva no `localStorage`) por cadastro/login real via Supabase Auth. O onboarding em si (escolha de modo, perfil, matérias) continua igual — só passa a gravar no banco em vez do navegador.
 
-## 3. IA com Groq — mapeamento direto do `ai.js` atual
+## 3. IA com Groq — mapeamento direto do `ai.js` atual (✅ já feito)
 
 Cada função hoje simulada por regras em `js/ai.js` vira uma chamada de servidor pra Groq (nunca direto do navegador, pra não expor a chave de API):
 
@@ -68,7 +68,7 @@ Essa extração roda em segundos, não tem custo de IA e cobre a grande maioria 
 
 Integrar Stripe para assinatura (mensal/anual), com um endpoint que verifica o status da assinatura antes de liberar as telas do app.
 
-## 6. Hospedagem e domínio
+## 6. Hospedagem e domínio (✅ caminho pronto — ver "Publicando num site" no README.md)
 
 Deploy no Vercel, conectado ao repositório. Domínio próprio configurado depois de validar o produto.
 

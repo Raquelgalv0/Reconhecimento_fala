@@ -18,6 +18,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { callGroq, DEFAULT_MODEL } from "./lib/groq.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8000;
@@ -39,7 +40,7 @@ function loadEnvLocal() {
 
 const localEnv = loadEnvLocal();
 const GROQ_API_KEY = process.env.GROQ_API_KEY || localEnv.GROQ_API_KEY || "";
-const GROQ_MODEL = process.env.GROQ_MODEL || localEnv.GROQ_MODEL || "llama-3.3-70b-versatile";
+const GROQ_MODEL = process.env.GROQ_MODEL || localEnv.GROQ_MODEL || DEFAULT_MODEL;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -72,114 +73,18 @@ function serveStatic(req, res) {
   });
 }
 
-// ---- Prompts por tarefa: cada uma pede uma resposta em JSON estrito, no
-// mesmo formato que o front-end (js/ai.js) já espera. ----
-function buildPrompt(task, params) {
-  const common = "Responda sempre em português do Brasil. Responda SOMENTE com um objeto JSON válido, sem nenhum texto antes ou depois, sem markdown.";
-
-  switch (task) {
-    case "summary": {
-      const { text, title } = params;
-      return {
-        system: `Você ajuda estudantes brasileiros a transformar material de aula em um resumo de estudo, em HTML simples (apenas as tags <p>, <h3>, <ul>, <li>, <strong>, <em>). ${common}`,
-        user: `Título (opcional): ${title || "(sem título)"}\n\nTexto-base:\n"""${text}"""\n\nGere um resumo: um parágrafo introdutório e, se fizer sentido, uma seção "Pontos-chave" em lista.\nResponda em JSON: {"html": "<p>...</p><h3>Pontos-chave</h3><ul><li>...</li></ul>"}`,
-      };
-    }
-    case "flashcardFromSelection": {
-      const { selectionText } = params;
-      return {
-        system: `Você cria flashcards de estudo (pergunta objetiva na frente, resposta direta no verso) a partir de um trecho de texto. ${common}`,
-        user: `Trecho selecionado:\n"""${selectionText}"""\n\nResponda em JSON: {"front": "pergunta objetiva", "back": "resposta direta"}`,
-      };
-    }
-    case "questionComment": {
-      const { statement, correctText } = params;
-      return {
-        system: `Você escreve comentários explicativos curtos para questões de múltipla escolha, justificando a alternativa correta. ${common}`,
-        user: `Enunciado: ${statement}\nAlternativa correta: ${correctText}\n\nResponda em JSON: {"comment": "explicação de 1 a 3 frases"}`,
-      };
-    }
-    case "flashcards": {
-      const { text, count } = params;
-      return {
-        system: `Você cria flashcards de estudo (pergunta objetiva, resposta direta) a partir de um material de aula. ${common}`,
-        user: `Material:\n"""${text}"""\n\nGere exatamente ${count} flashcards distintos, cobrindo os pontos mais importantes.\nResponda em JSON: {"flashcards": [{"front": "...", "back": "..."}]}`,
-      };
-    }
-    case "checklist": {
-      const { text, count } = params;
-      return {
-        system: `Você extrai uma checklist de pontos de revisão a partir de um material de aula. ${common}`,
-        user: `Material:\n"""${text}"""\n\nGere até ${count} itens de checklist (frases curtas, cada uma um ponto a revisar).\nResponda em JSON: {"items": ["...", "..."]}`,
-      };
-    }
-    case "questions": {
-      const { text, count } = params;
-      return {
-        system: `Você cria questões de múltipla escolha (estilo prova) a partir de um material de aula, com 4 alternativas (A a D), sendo só uma correta. ${common}`,
-        user: `Material:\n"""${text}"""\n\nGere exatamente ${count} questões distintas, cada uma com exatamente 4 alternativas e apenas um "correctId" correto.\nResponda em JSON: {"questions": [{"statement": "...", "alternatives": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}], "correctId": "A"}]}`,
-      };
-    }
-    case "mindmap": {
-      const { text, title } = params;
-      return {
-        system: `Você organiza um material de aula em um mapa mental simples: um tópico central e até 6 ramos (subtemas curtos). ${common}`,
-        user: `Título (opcional): ${title || "(sem título)"}\nMaterial:\n"""${text}"""\n\nResponda em JSON: {"title": "...", "branches": ["...", "..."]} com até 6 ramos curtos (no máximo ~10 palavras cada).`,
-      };
-    }
-    default:
-      throw new Error(`Tarefa de IA desconhecida: "${task}".`);
-  }
-}
-
-async function callGroq(task, params) {
-  if (!GROQ_API_KEY) {
-    throw new Error("GROQ_API_KEY não configurada. Crie o arquivo estuda-mais/.env.local com GROQ_API_KEY=sua_chave (veja .env.local.example).");
-  }
-  const { system, user } = buildPrompt(task, params);
-
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.4,
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`A Groq retornou um erro (HTTP ${response.status}): ${errText.slice(0, 300)}`);
-  }
-
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("A Groq devolveu uma resposta vazia.");
-
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error("Não foi possível interpretar a resposta da IA (não era um JSON válido).");
-  }
-}
-
 const server = http.createServer((req, res) => {
   if (req.method === "POST" && req.url === "/api/ai") {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
       try {
+        if (!GROQ_API_KEY) {
+          throw new Error('GROQ_API_KEY não configurada. Crie o arquivo estuda-mais/.env.local com GROQ_API_KEY=sua_chave (veja .env.local.example).');
+        }
         const parsed = JSON.parse(body || "{}");
         const { task, ...params } = parsed;
-        const result = await callGroq(task, params);
+        const result = await callGroq({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, task, params });
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(result));
       } catch (err) {

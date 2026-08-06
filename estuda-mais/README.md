@@ -37,7 +37,34 @@ Nesse modo, tudo funciona normalmente exceto os botões de geração por IA
 mostram um aviso pedindo para rodar via `node server.js`.
 
 Os dados (pastas, resumos, flashcards, questões e progresso) ficam salvos no
-`localStorage` do navegador — não há banco de dados nesta fase.
+`localStorage` do navegador — não há banco de dados nesta fase (cada pessoa
+que acessa tem seus próprios dados, isolados no navegador dela).
+
+## Publicando num site (link público)
+
+`server.js` é para uso local. Para um link público de verdade, é preciso um
+serviço que rode a parte de servidor — GitHub Pages **não** serve, porque só
+publica arquivos estáticos e não executa código, então a IA não funcionaria.
+
+O jeito mais simples é a **Vercel** (tem plano gratuito):
+
+1. Crie uma conta em vercel.com e conecte com o GitHub
+2. "Add New Project" → selecione este repositório
+3. Em **Root Directory**, aponte para `estuda-mais`
+4. Em **Environment Variables**, adicione `GROQ_API_KEY` com sua chave (cole
+   direto no campo da Vercel — nunca no código)
+5. Deploy
+
+O projeto já está estruturado para isso: `api/ai.js` vira automaticamente uma
+função na nuvem (mesma lógica do `/api/ai` do `server.js`, compartilhada via
+`lib/groq.js`), e os arquivos estáticos são servidos pela própria Vercel.
+
+> **Atenção antes de divulgar o link**: como ainda não há login, qualquer
+> pessoa com o link consegue usar os botões de IA — e isso consome a sua
+> chave/seu crédito na Groq. Para um teste com poucas pessoas de confiança,
+> tudo bem. Para divulgação ampla e pública, espere a etapa de autenticação
+> do roteiro de migração (veja `MIGRATION.md`) e considere configurar um
+> limite de gasto na sua conta da Groq como proteção extra nesse meio-tempo.
 
 ## O que está implementado
 
