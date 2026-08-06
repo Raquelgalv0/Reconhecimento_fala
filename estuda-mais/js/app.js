@@ -17,11 +17,25 @@ const MODES = [
 
 const appRoot = document.getElementById("app");
 
+function renderLoadingScreen(message) {
+  appRoot.innerHTML = `
+    <div class="onboarding-overlay">
+      <div class="onboarding-card" style="text-align:center;">
+        <div class="onboarding-step">Estuda+</div>
+        <p style="margin:0;">${message}</p>
+      </div>
+    </div>`;
+}
+
 async function boot() {
   const session = await getValidSession();
   if (!session) {
     renderAuthScreen();
     return;
+  }
+  if (!store.hydrated || store.userId !== session.user.id) {
+    renderLoadingScreen("Carregando seus dados...");
+    await store.hydrate(session);
   }
   if (!store.state.onboarded) {
     renderOnboarding();
@@ -339,6 +353,7 @@ function renderSidebar(sidebarEl) {
   sidebarEl.querySelector("#logout-btn").addEventListener("click", async () => {
     if (!confirm("Sair da sua conta?")) return;
     await signOut();
+    store.reset();
     boot();
   });
 

@@ -1,103 +1,27 @@
 import { newSrsState } from "./srs.js";
-
-const STORAGE_KEY = "estuda-mais:v1";
+import { showToast } from "./ui-utils.js";
+import * as db from "./db.js";
 
 function uid(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
-function seedState() {
-  const folderConst = uid("f");
-  const folderControle = uid("f");
-  const folderMedFam = uid("f");
-  const folderDengue = uid("f");
+function dayKey(date) {
+  return date.toISOString().slice(0, 10);
+}
 
-  const summaryId = uid("s");
-
-  const fc1 = uid("fc");
-  const fc2 = uid("fc");
-  const fc3 = uid("fc");
-
+function emptyState() {
   return {
     onboarded: false,
     modes: [],
     profile: { name: "", studyArea: "", level: "", dailyTimeMinutes: null },
-    folders: [
-      { id: folderConst, name: "Direito Constitucional", parentId: null },
-      { id: folderControle, name: "Controle de Constitucionalidade", parentId: folderConst },
-      { id: folderMedFam, name: "Medicina da Família", parentId: null },
-      { id: folderDengue, name: "Doenças Virais", parentId: folderMedFam },
-    ],
-    summaries: [
-      {
-        id: summaryId,
-        folderId: folderControle,
-        title: "Controle de Constitucionalidade",
-        contentHtml:
-          "<p>O controle de constitucionalidade é o mecanismo que garante a supremacia da Constituição Federal sobre as demais normas do ordenamento jurídico.</p>" +
-          `<p><mark class="linked-fc" data-fc-id="${fc1}">A Ação Direta de Inconstitucionalidade (ADI) é o instrumento utilizado para declarar que uma lei ou ato normativo é incompatível com a Constituição Federal.</mark> Ela é julgada originariamente pelo Supremo Tribunal Federal.</p>` +
-          "<h3>Legitimados</h3>" +
-          "<p>Podem propor ADI, entre outros: o Presidente da República, a Mesa do Senado, a Mesa da Câmara, partidos políticos com representação no Congresso e confederações sindicais.</p>" +
-          `<p>Já a <mark class="linked-fc" data-fc-id="${fc2}">Ação Declaratória de Constitucionalidade (ADC) tem o objetivo inverso: confirmar que uma norma é compatível com a Constituição, geralmente usada quando há controvérsia relevante nos tribunais.</mark></p>`,
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-      },
-      {
-        id: uid("s"),
-        folderId: folderDengue,
-        title: "Sintomas e Diagnóstico da Dengue",
-        contentHtml:
-          `<p><mark class="linked-fc" data-fc-id="${fc3}">Os sintomas clássicos da dengue incluem febre alta de início súbito, dor de cabeça intensa, dor atrás dos olhos, dores musculares e articulares, além de manchas vermelhas na pele.</mark></p>` +
-          "<p>Sinais de alarme exigem atenção imediata: dor abdominal intensa, vômitos persistentes, sangramentos e queda da pressão arterial.</p>",
-        createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-      },
-    ],
-    flashcards: [
-      {
-        id: fc1,
-        folderId: folderControle,
-        front: "O que é a Ação Direta de Inconstitucionalidade (ADI)?",
-        back: "É o instrumento utilizado para declarar que uma lei ou ato normativo é incompatível com a Constituição Federal.",
-        hint: "",
-        summaryId,
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        srs: { ...newSrsState(), stepIndex: -1, dueDate: new Date().toISOString().slice(0, 10) },
-      },
-      {
-        id: fc2,
-        folderId: folderControle,
-        front: "Qual o objetivo da Ação Declaratória de Constitucionalidade (ADC)?",
-        back: "Confirmar que uma norma é compatível com a Constituição, geralmente usada quando há controvérsia relevante nos tribunais.",
-        hint: "",
-        summaryId,
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        srs: { ...newSrsState(), stepIndex: 1, dueDate: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10) },
-      },
-      {
-        id: fc3,
-        folderId: folderDengue,
-        front: "Quais são os sintomas clássicos da dengue?",
-        back: "Febre alta de início súbito, dor de cabeça intensa, dor atrás dos olhos, dores musculares e articulares, além de manchas vermelhas na pele.",
-        hint: "",
-        summaryId: uid("s"),
-        createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-        srs: { ...newSrsState(), stepIndex: -1, dueDate: new Date().toISOString().slice(0, 10) },
-      },
-      {
-        id: uid("fc"),
-        folderId: folderDengue,
-        front: "Cite dois sinais de alarme da dengue.",
-        back: "Dor abdominal intensa e vômitos persistentes (também: sangramentos, queda de pressão).",
-        hint: "",
-        summaryId: null,
-        createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-        srs: { ...newSrsState(), stepIndex: 0, dueDate: new Date(Date.now() + 1 * 86400000).toISOString().slice(0, 10) },
-      },
-    ],
-    ...seedQuestionData(folderControle, folderDengue),
+    folders: [],
+    summaries: [],
+    flashcards: [],
+    questions: [],
+    questionAttempts: [],
     dailyGoal: 10,
-    dailyLog: seedDailyLog(),
+    dailyLog: {},
     ui: {
       route: "dashboard",
       activeFolderId: null,
@@ -111,157 +35,125 @@ function seedState() {
   };
 }
 
-function seedQuestionData(folderControle, folderDengue) {
-  const q1 = uid("q");
-  const q2 = uid("q");
-  const q3 = uid("q");
-  const q4 = uid("q");
-  const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
+// ---- Conversão entre o formato do app (camelCase) e as tabelas do banco
+// (snake_case). Mantém store.js como a única peça que sabe desse mapeamento
+// — o resto do app continua lendo store.state exatamente como antes. ----
+const mapFolder = {
+  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId }),
+  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id }),
+};
+const mapSummary = {
+  toDb: (s, userId) => ({
+    id: s.id,
+    user_id: userId,
+    folder_id: s.folderId,
+    title: s.title,
+    content_html: s.contentHtml,
+    page_style: s.pageStyle,
+    created_at: s.createdAt,
+    updated_at: s.updatedAt,
+  }),
+  fromDb: (r) => ({
+    id: r.id,
+    folderId: r.folder_id,
+    title: r.title,
+    contentHtml: r.content_html,
+    pageStyle: r.page_style,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }),
+};
+const mapCard = {
+  toDb: (c, userId) => ({
+    id: c.id,
+    user_id: userId,
+    folder_id: c.folderId,
+    front: c.front,
+    back: c.back,
+    hint: c.hint,
+    summary_id: c.summaryId,
+    created_at: c.createdAt,
+    srs: c.srs,
+  }),
+  fromDb: (r) => ({
+    id: r.id,
+    folderId: r.folder_id,
+    front: r.front,
+    back: r.back,
+    hint: r.hint,
+    summaryId: r.summary_id,
+    createdAt: r.created_at,
+    srs: r.srs,
+  }),
+};
+const mapQuestion = {
+  toDb: (q, userId) => ({
+    id: q.id,
+    user_id: userId,
+    folder_id: q.folderId,
+    statement: q.statement,
+    alternatives: q.alternatives,
+    correct_id: q.correctId,
+    institution: q.institution,
+    year: q.year,
+    difficulty: q.difficulty,
+    favorite: q.favorite,
+    comment: q.comment,
+    created_at: q.createdAt,
+  }),
+  fromDb: (r) => ({
+    id: r.id,
+    folderId: r.folder_id,
+    statement: r.statement,
+    alternatives: r.alternatives,
+    correctId: r.correct_id,
+    institution: r.institution,
+    year: r.year,
+    difficulty: r.difficulty,
+    favorite: r.favorite,
+    comment: r.comment,
+    createdAt: r.created_at,
+  }),
+};
+const mapAttempt = {
+  toDb: (a, userId) => ({ id: a.id, user_id: userId, question_id: a.questionId, chosen_id: a.chosenId, correct: a.correct, at: a.at }),
+  fromDb: (r) => ({ id: r.id, questionId: r.question_id, chosenId: r.chosen_id, correct: r.correct, at: r.at }),
+};
 
-  const attempts = [
-    { id: uid("qa"), questionId: q1, chosenId: "A", correct: false, at: daysAgo(6) },
-    { id: uid("qa"), questionId: q1, chosenId: "A", correct: false, at: daysAgo(3) },
-    { id: uid("qa"), questionId: q1, chosenId: "C", correct: true, at: daysAgo(1) },
-    { id: uid("qa"), questionId: q2, chosenId: "B", correct: true, at: daysAgo(5) },
-    { id: uid("qa"), questionId: q2, chosenId: "B", correct: true, at: daysAgo(2) },
-    { id: uid("qa"), questionId: q3, chosenId: "A", correct: false, at: daysAgo(4) },
-    { id: uid("qa"), questionId: q3, chosenId: "B", correct: true, at: daysAgo(1) },
-    { id: uid("qa"), questionId: q4, chosenId: "A", correct: false, at: daysAgo(4) },
-    { id: uid("qa"), questionId: q4, chosenId: "A", correct: false, at: daysAgo(2) },
-    { id: uid("qa"), questionId: q4, chosenId: "C", correct: false, at: daysAgo(1) },
-  ];
-
-  const questions = [
-    {
-      id: q1,
-      folderId: folderControle,
-      statement: "Sobre o controle de constitucionalidade, é correto afirmar que:",
-      alternatives: [
-        { id: "A", text: "A ADI pode ser proposta por qualquer cidadão brasileiro." },
-        { id: "B", text: "A ADC tem por objetivo declarar a inconstitucionalidade de uma lei." },
-        { id: "C", text: "O Presidente da República é um dos legitimados para propor ADI." },
-        { id: "D", text: "Decisões em ADI não possuem efeito vinculante." },
-        { id: "E", text: "A ADI só pode ser julgada por tribunais estaduais." },
-      ],
-      correctId: "C",
-      institution: "CESPE/Cebraspe",
-      year: 2022,
-      difficulty: "medio",
-      favorite: false,
-      comment: "A legitimidade para propor ADI está prevista no art. 103 da CF/88 e inclui o Presidente da República, entre outros.",
-      createdAt: daysAgo(6),
-    },
-    {
-      id: q2,
-      folderId: folderControle,
-      statement: "A Ação Declaratória de Constitucionalidade (ADC) tem como principal finalidade:",
-      alternatives: [
-        { id: "A", text: "Revogar uma lei já declarada inconstitucional." },
-        { id: "B", text: "Confirmar a constitucionalidade de uma lei federal diante de controvérsia relevante." },
-        { id: "C", text: "Substituir o controle difuso de constitucionalidade." },
-        { id: "D", text: "Impedir que o Congresso Nacional edite novas leis." },
-        { id: "E", text: "Julgar crimes de responsabilidade do Presidente." },
-      ],
-      correctId: "B",
-      institution: "FGV",
-      year: 2021,
-      difficulty: "facil",
-      favorite: true,
-      comment: null,
-      createdAt: daysAgo(5),
-    },
-    {
-      id: q3,
-      folderId: folderDengue,
-      statement: "Sobre os sintomas clássicos da dengue, assinale a alternativa correta:",
-      alternatives: [
-        { id: "A", text: "Tosse seca persistente é o sintoma mais característico." },
-        { id: "B", text: "Febre alta de início súbito associada a dores musculares e articulares é típica da fase inicial." },
-        { id: "C", text: "A ausência de febre descarta o diagnóstico de dengue." },
-        { id: "D", text: "Manchas vermelhas na pele indicam cura da doença." },
-        { id: "E", text: "A doença não causa dor de cabeça." },
-      ],
-      correctId: "B",
-      institution: "Hospital Sírio-Libanês",
-      year: 2023,
-      difficulty: "medio",
-      favorite: false,
-      comment: null,
-      createdAt: daysAgo(4),
-    },
-    {
-      id: q4,
-      folderId: folderDengue,
-      statement: "São considerados sinais de alarme na dengue, EXCETO:",
-      alternatives: [
-        { id: "A", text: "Dor abdominal intensa e contínua." },
-        { id: "B", text: "Vômitos persistentes." },
-        { id: "C", text: "Sangramento de mucosas." },
-        { id: "D", text: "Queda abrupta da pressão arterial." },
-        { id: "E", text: "Apetite preservado e disposição para atividades físicas." },
-      ],
-      correctId: "E",
-      institution: "SES-SP",
-      year: 2022,
-      difficulty: "dificil",
-      favorite: false,
-      comment: "Sinais de alarme indicam agravamento clínico; apetite preservado é sinal de estabilidade, não de alarme.",
-      createdAt: daysAgo(4),
-    },
-  ];
-
-  return { questions, questionAttempts: attempts };
-}
-
-function dayKey(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function seedDailyLog() {
-  // últimos 14 dias, com um dia sem atividade no meio para demonstrar a
-  // diferença entre a sequência atual e a melhor sequência já alcançada.
-  const days = [
-    { n: 13, total: 5, correct: 3, minutes: 14 },
-    { n: 12, total: 7, correct: 5, minutes: 18 },
-    { n: 11, total: 6, correct: 5, minutes: 16 },
-    { n: 10, total: 8, correct: 6, minutes: 20 },
-    { n: 9, total: 9, correct: 7, minutes: 22 },
-    { n: 8, total: 6, correct: 4, minutes: 15 },
-    { n: 7, total: 7, correct: 6, minutes: 17 },
-    { n: 6, total: 0, correct: 0, minutes: 0 },
-    { n: 5, total: 5, correct: 3, minutes: 12 },
-    { n: 4, total: 9, correct: 7, minutes: 20 },
-    { n: 3, total: 7, correct: 6, minutes: 18 },
-    { n: 2, total: 11, correct: 9, minutes: 24 },
-    { n: 1, total: 8, correct: 7, minutes: 19 },
-    { n: 0, total: 6, correct: 5, minutes: 10 },
-  ];
-  const log = {};
-  for (const d of days) {
-    const date = new Date(Date.now() - d.n * 86400000);
-    log[dayKey(date)] = { total: d.total, correct: d.correct, minutes: d.minutes };
-  }
-  return log;
-}
-
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.warn("Falha ao carregar estado salvo, iniciando com dados de exemplo.", e);
-  }
-  return seedState();
+function reportSyncError(action, err) {
+  showToast(`Não foi possível ${action} na nuvem: ${err.message}`, "alertCircle");
 }
 
 class Store {
   constructor() {
-    this.state = load();
+    this.state = emptyState();
     this.listeners = new Set();
+    this.userId = null;
+    this.session = null;
+    this.hydrated = false;
   }
+
+  // Chamado no logout, para não deixar os dados de um usuário visíveis por
+  // um instante quando outra pessoa loga em seguida na mesma aba.
+  reset() {
+    this.state = emptyState();
+    this.userId = null;
+    this.session = null;
+    this.hydrated = false;
+  }
+
+  localCacheKey() {
+    return `estuda-mais:v2:${this.userId}`;
+  }
+
   save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+    if (this.userId) {
+      try {
+        localStorage.setItem(this.localCacheKey(), JSON.stringify(this.state));
+      } catch {
+        // localStorage cheio/indisponível — não é crítico, o banco continua sendo a fonte real.
+      }
+    }
     this.listeners.forEach((fn) => fn(this.state));
   }
   subscribe(fn) {
@@ -269,11 +161,75 @@ class Store {
     return () => this.listeners.delete(fn);
   }
 
+  loadLocalCache() {
+    try {
+      const raw = localStorage.getItem(this.localCacheKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Busca todos os dados do usuário logado no Supabase e monta o estado do
+  // app a partir do banco. Chamado uma vez, logo após o login.
+  async hydrate(session) {
+    this.session = session;
+    this.userId = session.user.id;
+    try {
+      const [profileRows, folderRows, summaryRows, cardRows, questionRows, attemptRows, dailyRows] = await Promise.all([
+        db.selectAll("profiles", session),
+        db.selectAll("folders", session),
+        db.selectAll("summaries", session),
+        db.selectAll("flashcards", session),
+        db.selectAll("questions", session),
+        db.selectAll("question_attempts", session),
+        db.selectAll("daily_log", session),
+      ]);
+
+      const profileRow = profileRows[0] || null;
+      const dailyLog = {};
+      dailyRows.forEach((r) => {
+        dailyLog[r.day] = { total: r.total, correct: r.correct, minutes: r.minutes };
+      });
+
+      this.state = {
+        onboarded: profileRow?.onboarded || false,
+        modes: profileRow?.modes || [],
+        profile: {
+          name: profileRow?.name || "",
+          studyArea: profileRow?.study_area || "",
+          level: profileRow?.level || "",
+          dailyTimeMinutes: profileRow?.daily_time_minutes ?? null,
+        },
+        folders: folderRows.map(mapFolder.fromDb),
+        summaries: summaryRows.map(mapSummary.fromDb),
+        flashcards: cardRows.map(mapCard.fromDb),
+        questions: questionRows.map(mapQuestion.fromDb),
+        questionAttempts: attemptRows.map(mapAttempt.fromDb),
+        dailyGoal: profileRow?.daily_goal ?? 10,
+        dailyLog,
+        ui: emptyState().ui,
+      };
+      this.hydrated = true;
+      this.save();
+    } catch (err) {
+      const cached = this.loadLocalCache();
+      if (cached) {
+        this.state = cached;
+        showToast("Sem conexão com o banco — mostrando a última cópia salva neste navegador.", "alertCircle");
+      } else {
+        showToast("Sem conexão com o banco. Verifique sua internet e recarregue a página.", "alertCircle");
+      }
+      this.hydrated = true;
+    }
+  }
+
   // ---- Folders ----
   addFolder(name, parentId = null) {
     const folder = { id: uid("f"), name, parentId };
     this.state.folders.push(folder);
     this.save();
+    db.insertRow("folders", mapFolder.toDb(folder, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
     return folder;
   }
   folderPath(folderId) {
@@ -326,6 +282,7 @@ class Store {
     };
     this.state.summaries.push(summary);
     this.save();
+    db.insertRow("summaries", mapSummary.toDb(summary, this.userId), this.session).catch((err) => reportSyncError("salvar o resumo", err));
     return summary;
   }
   updateSummary(id, patch) {
@@ -333,18 +290,29 @@ class Store {
     if (!s) return;
     Object.assign(s, patch, { updatedAt: new Date().toISOString() });
     this.save();
+    db.updateRow("summaries", id, mapSummary.toDb(s, this.userId), this.session).catch((err) => reportSyncError("salvar o resumo", err));
   }
   // Persiste sem notificar os listeners: usado nos handlers de digitação
   // (título/editor) para nunca reconstruir o DOM enquanto o usuário digita.
+  // O erro é silencioso aqui de propósito (dispara a cada pausa na digitação);
+  // updateSummary (chamado no blur) tenta de novo e avisa se continuar falhando.
   patchSummarySilent(id, patch) {
     const s = this.state.summaries.find((x) => x.id === id);
     if (!s) return;
     Object.assign(s, patch, { updatedAt: new Date().toISOString() });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+    if (this.userId) {
+      try {
+        localStorage.setItem(this.localCacheKey(), JSON.stringify(this.state));
+      } catch {
+        // não crítico
+      }
+    }
+    db.updateRow("summaries", id, mapSummary.toDb(s, this.userId), this.session).catch(() => {});
   }
   deleteSummary(id) {
     this.state.summaries = this.state.summaries.filter((s) => s.id !== id);
     this.save();
+    db.deleteRow("summaries", id, this.session).catch((err) => reportSyncError("excluir o resumo", err));
   }
   summariesInFolder(folderId) {
     return this.state.summaries.filter((s) => s.folderId === folderId);
@@ -367,6 +335,7 @@ class Store {
     };
     this.state.flashcards.push(card);
     this.save();
+    db.insertRow("flashcards", mapCard.toDb(card, this.userId), this.session).catch((err) => reportSyncError("salvar o flashcard", err));
     return card;
   }
   updateFlashcard(id, patch) {
@@ -374,10 +343,12 @@ class Store {
     if (!c) return;
     Object.assign(c, patch);
     this.save();
+    db.updateRow("flashcards", id, mapCard.toDb(c, this.userId), this.session).catch((err) => reportSyncError("salvar o flashcard", err));
   }
   deleteFlashcard(id) {
     this.state.flashcards = this.state.flashcards.filter((c) => c.id !== id);
     this.save();
+    db.deleteRow("flashcards", id, this.session).catch((err) => reportSyncError("excluir o flashcard", err));
   }
   cardsInFolder(folderId) {
     return this.state.flashcards.filter((c) => c.folderId === folderId);
@@ -406,6 +377,7 @@ class Store {
     };
     this.state.questions.push(question);
     this.save();
+    db.insertRow("questions", mapQuestion.toDb(question, this.userId), this.session).catch((err) => reportSyncError("salvar a questão", err));
     return question;
   }
   updateQuestion(id, patch) {
@@ -413,17 +385,21 @@ class Store {
     if (!q) return;
     Object.assign(q, patch);
     this.save();
+    db.updateRow("questions", id, mapQuestion.toDb(q, this.userId), this.session).catch((err) => reportSyncError("salvar a questão", err));
   }
   deleteQuestion(id) {
     this.state.questions = this.state.questions.filter((q) => q.id !== id);
     this.state.questionAttempts = this.state.questionAttempts.filter((a) => a.questionId !== id);
     this.save();
+    // question_attempts tem "on delete cascade" no banco — apagar a questão já limpa as tentativas.
+    db.deleteRow("questions", id, this.session).catch((err) => reportSyncError("excluir a questão", err));
   }
   toggleFavoriteQuestion(id) {
     const q = this.state.questions.find((x) => x.id === id);
     if (!q) return;
     q.favorite = !q.favorite;
     this.save();
+    db.updateRow("questions", id, { favorite: q.favorite }, this.session).catch((err) => reportSyncError("salvar o favorito", err));
   }
   questionsInFolder(folderId) {
     return this.state.questions.filter((q) => q.folderId === folderId);
@@ -450,6 +426,7 @@ class Store {
     const correct = chosenId === question.correctId;
     const attempt = { id: uid("qa"), questionId, chosenId, correct, at: new Date().toISOString() };
     this.state.questionAttempts.push(attempt);
+    db.insertRow("question_attempts", mapAttempt.toDb(attempt, this.userId), this.session).catch((err) => reportSyncError("salvar a tentativa", err));
     this.logStudyDay({ correct });
     return attempt;
   }
@@ -498,6 +475,9 @@ class Store {
     }
     if (minutes) day.minutes += minutes;
     this.save();
+    db.upsertRow("daily_log", { user_id: this.userId, day: key, ...day }, this.session, "user_id,day").catch((err) =>
+      reportSyncError("salvar o progresso do dia", err)
+    );
   }
   addStudyMinutes(n) {
     this.logStudyDay({ minutes: n });
@@ -557,6 +537,9 @@ class Store {
   setDailyGoal(n) {
     this.state.dailyGoal = Math.max(1, Math.round(n));
     this.save();
+    db.updateRow("profiles", this.userId, { daily_goal: this.state.dailyGoal }, this.session, "id").catch((err) =>
+      reportSyncError("salvar a meta diária", err)
+    );
   }
   todayProgress() {
     const key = dayKey(new Date());
@@ -583,23 +566,55 @@ class Store {
   completeOnboarding({ modes, profile, materias }) {
     this.state.modes = modes;
     this.state.profile = profile;
+    const newFolders = [];
     (materias || "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean)
       .forEach((name) => {
         const exists = this.state.folders.some((f) => !f.parentId && f.name.toLowerCase() === name.toLowerCase());
-        if (!exists) this.state.folders.push({ id: uid("f"), name, parentId: null });
+        if (!exists) {
+          const folder = { id: uid("f"), name, parentId: null };
+          this.state.folders.push(folder);
+          newFolders.push(folder);
+        }
       });
     this.state.onboarded = true;
     this.save();
+
+    const profileRow = {
+      id: this.userId,
+      modes,
+      name: profile.name || "",
+      study_area: profile.studyArea || "",
+      level: profile.level || "",
+      daily_time_minutes: profile.dailyTimeMinutes ?? null,
+      onboarded: true,
+      daily_goal: this.state.dailyGoal,
+    };
+    db.upsertRow("profiles", profileRow, this.session, "id").catch((err) => reportSyncError("salvar seu perfil", err));
+    newFolders.forEach((folder) => {
+      db.insertRow("folders", mapFolder.toDb(folder, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
+    });
   }
   updateProfile(patch) {
     this.state.profile = { ...this.state.profile, ...patch };
     this.save();
+    db.updateRow(
+      "profiles",
+      this.userId,
+      {
+        name: this.state.profile.name || "",
+        study_area: this.state.profile.studyArea || "",
+        level: this.state.profile.level || "",
+        daily_time_minutes: this.state.profile.dailyTimeMinutes ?? null,
+      },
+      this.session,
+      "id"
+    ).catch((err) => reportSyncError("salvar seu perfil", err));
   }
 
-  // ---- Backup (os dados só existem neste navegador) ----
+  // ---- Backup (exporta/importa o estado local; não sincroniza com a nuvem) ----
   exportData() {
     return JSON.stringify(this.state, null, 2);
   }
@@ -610,6 +625,7 @@ class Store {
     }
     this.state = parsed;
     this.save();
+    showToast("Backup importado neste navegador. Edite algo em cada área para sincronizar de volta com a nuvem.", "alertCircle");
   }
 
   setRoute(route, extra = {}) {

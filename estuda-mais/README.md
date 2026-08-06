@@ -36,9 +36,35 @@ Nesse modo, tudo funciona normalmente exceto os botões de geração por IA
 ("Gerar com IA", "Sugerir comentário", "Processar com IA" no Upload), que
 mostram um aviso pedindo para rodar via `node server.js`.
 
-Os dados (pastas, resumos, flashcards, questões e progresso) ficam salvos no
-`localStorage` do navegador — não há banco de dados nesta fase (cada pessoa
-que acessa tem seus próprios dados, isolados no navegador dela).
+Os dados (pastas, resumos, flashcards, questões e progresso) agora ficam
+salvos de verdade no banco de dados (Supabase Postgres), associados à conta
+logada — veja a seção "Banco de dados" abaixo. O navegador guarda uma cópia
+local (`localStorage`) só como cache/fallback, para abrir rápido e continuar
+funcionando numa queda de internet passageira.
+
+## Banco de dados (Supabase)
+
+Antes de usar o app pela primeira vez, rode o esquema do banco uma única vez:
+
+1. No painel do seu projeto Supabase → **SQL Editor** → **New query**
+2. Cole todo o conteúdo de `supabase/schema.sql`
+3. **Run**
+
+Isso cria as tabelas (`profiles`, `folders`, `summaries`, `flashcards`,
+`questions`, `question_attempts`, `daily_log`) e ativa o Row Level Security —
+cada linha só é visível/editável pelo próprio dono (`auth.uid()`), então
+mesmo com a chave pública do projeto exposta no navegador, ninguém acessa
+dados de outra conta.
+
+Como funciona no app: ao logar, `store.hydrate()` busca tudo do usuário no
+banco e monta o estado local a partir disso; toda ação (criar resumo, marcar
+flashcard, responder questão etc.) atualiza a tela na hora e, em paralelo,
+salva no banco — se a gravação falhar (sem internet, por exemplo), aparece um
+aviso e a ação continua válida localmente até conseguir sincronizar de novo.
+
+**Limitação atual**: o botão "Importar backup" (JSON) ainda só restaura os
+dados neste navegador — não empurra o conteúdo importado de volta pro banco
+automaticamente.
 
 ## Publicando num site (link público)
 

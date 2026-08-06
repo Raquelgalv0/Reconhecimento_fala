@@ -2,7 +2,7 @@
 
 Este documento descreve como transformar o protótipo estático atual (HTML/CSS/JS puro, dados só no `localStorage` do navegador) em um produto real, com backend, banco de dados seguro, backup e contas de usuário.
 
-> **Status atual**: a etapa de IA (item 3 abaixo) e o caminho de hospedagem na Vercel (item 6) **já estão implementados** — veja `server.js`, `lib/groq.js`, `api/ai.js` e a seção "Publicando num site" do `README.md`. O que falta é o restante: banco de dados real (item 1), login (item 2), upload de PDF/Word (item 4) e pagamento (item 5) — hoje os dados continuam só no `localStorage` de cada navegador, sem conta de usuário nem cobrança.
+> **Status atual**: banco de dados real (item 1), autenticação (item 2), IA (item 3) e hospedagem na Vercel (item 6) **já estão implementados** — veja `supabase/schema.sql`, `js/auth.js`, `js/db.js`, `server.js`, `lib/groq.js`, `api/ai.js` e o `README.md`. O que falta: upload de PDF/Word (item 4), pagamento (item 5), e sincronizar de volta pro banco o que é restaurado via "Importar backup".
 
 ## Stack alvo
 
@@ -18,7 +18,7 @@ Este documento descreve como transformar o protótipo estático atual (HTML/CSS/
 | Pagamento/assinatura | Stripe | Padrão de mercado para SaaS |
 | Hospedagem | Vercel | Integração nativa com Next.js |
 
-## 1. Banco de dados (Supabase)
+## 1. Banco de dados (Supabase) (✅ já feito)
 
 Portar o estado hoje guardado em `store.js` (um objeto único no `localStorage`) para tabelas reais:
 
@@ -32,9 +32,9 @@ Portar o estado hoje guardado em `store.js` (um objeto único no `localStorage`)
 
 Cada tabela leva `user_id` + política de RLS restringindo `auth.uid() = user_id`.
 
-## 2. Autenticação (🟡 login feito, dados ainda não sincronizam)
+## 2. Autenticação (✅ já feito)
 
-O login (cadastro/entrada por e-mail e senha via Supabase Auth) já está implementado — veja a seção "Login" do `README.md`. O que falta desta etapa: hoje o onboarding (escolha de modo, perfil, matérias) e todos os dados do app continuam gravando só no `localStorage`, sem ligação real com a conta logada. Terminar esta etapa é trocar esses pontos de gravação para o banco de dados (item 1), usando o `user_id` da sessão já disponível em `js/auth.js`.
+Login (cadastro/entrada por e-mail e senha via Supabase Auth) implementado em `js/auth.js`, e todos os dados (onboarding, resumos, flashcards, questões, progresso) já gravam no banco associados ao `user_id` da sessão — não ficam mais só no `localStorage` do navegador.
 
 ## 3. IA com Groq — mapeamento direto do `ai.js` atual (✅ já feito)
 
