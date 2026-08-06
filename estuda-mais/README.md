@@ -59,12 +59,36 @@ O projeto já está estruturado para isso: `api/ai.js` vira automaticamente uma
 função na nuvem (mesma lógica do `/api/ai` do `server.js`, compartilhada via
 `lib/groq.js`), e os arquivos estáticos são servidos pela própria Vercel.
 
-> **Atenção antes de divulgar o link**: como ainda não há login, qualquer
-> pessoa com o link consegue usar os botões de IA — e isso consome a sua
-> chave/seu crédito na Groq. Para um teste com poucas pessoas de confiança,
-> tudo bem. Para divulgação ampla e pública, espere a etapa de autenticação
-> do roteiro de migração (veja `MIGRATION.md`) e considere configurar um
-> limite de gasto na sua conta da Groq como proteção extra nesse meio-tempo.
+> **Sobre o consumo da chave da Groq**: agora é preciso estar logado para usar
+> os botões de IA (veja a seção "Login" abaixo), então estranhos com o link
+> não conseguem mais gastar seu crédito sem criar conta primeiro. Ainda assim,
+> qualquer pessoa pode criar uma conta e usar — para divulgação ampla, vale
+> considerar um limite de gasto na sua conta da Groq como proteção extra.
+
+## Login (Supabase Auth)
+
+O app agora exige login (e-mail/senha) antes de liberar o uso e antes de
+autorizar qualquer chamada de IA — protege contra estranhos consumindo sua
+chave da Groq caso o link vaze.
+
+- `js/config.js` guarda a URL do projeto e a "publishable key" do Supabase.
+  Essas duas informações são **públicas por natureza** (foram feitas para
+  aparecer no navegador) — não são segredo como a `GROQ_API_KEY`, por isso
+  estão versionadas no repositório normalmente.
+- `js/auth.js` fala direto com a API REST de Auth do Supabase (sem SDK
+  externo — só `fetch`), guarda a sessão no `localStorage` e renova o token
+  automaticamente antes de expirar.
+- `server.js` e `api/ai.js` validam o token do usuário (via
+  `lib/supabase-verify.js`) antes de gastar crédito da Groq — quem não está
+  logado recebe erro 401 e não consegue chamar a IA.
+- **Importante**: os dados do app (resumos, flashcards, questões) continuam
+  só no `localStorage` de cada navegador nesta fase — o login não sincroniza
+  isso entre dispositivos ainda. Sincronizar dados de verdade é a próxima
+  etapa do roteiro de migração (`MIGRATION.md`, item 1).
+- No painel do seu projeto Supabase, em **Authentication → Providers → Email**,
+  a opção "Confirm email" vem ligada por padrão — enquanto estiver testando,
+  pode valer desligá-la, senão quem criar conta precisa clicar num link no
+  e-mail antes de conseguir entrar.
 
 ## O que está implementado
 

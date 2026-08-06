@@ -19,6 +19,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { callGroq, DEFAULT_MODEL } from "./lib/groq.js";
+import { verifyUser } from "./lib/supabase-verify.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./js/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 8000;
@@ -79,6 +81,12 @@ const server = http.createServer((req, res) => {
     req.on("data", (chunk) => (body += chunk));
     req.on("end", async () => {
       try {
+        const user = await verifyUser(req.headers["authorization"], SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (!user) {
+          res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Faça login para usar a IA." }));
+          return;
+        }
         if (!GROQ_API_KEY) {
           throw new Error('GROQ_API_KEY não configurada. Crie o arquivo estuda-mais/.env.local com GROQ_API_KEY=sua_chave (veja .env.local.example).');
         }

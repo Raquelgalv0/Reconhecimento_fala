@@ -1,13 +1,20 @@
 // Camada de IA — chama a API da Groq através do servidor local (server.js),
 // que é quem de fato guarda a chave e fala com a Groq. O navegador nunca vê
 // a chave: só manda { task, ...params } para /api/ai e recebe o resultado.
+// O servidor exige login (token do Supabase) antes de gastar crédito da Groq.
+import { getValidSession } from "./auth.js";
 
 async function callAi(task, params) {
+  const session = await getValidSession();
+  if (!session) {
+    throw new Error("Faça login para usar a IA.");
+  }
+
   let response;
   try {
     response = await fetch("/api/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ task, ...params }),
     });
   } catch {

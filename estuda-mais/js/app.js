@@ -7,6 +7,7 @@ import { renderDesempenho } from "./views/desempenho.js";
 import { renderUpload } from "./views/upload.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
+import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
 
 const MODES = [
   { id: "concurso", icon: "barChart", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
@@ -16,12 +17,100 @@ const MODES = [
 
 const appRoot = document.getElementById("app");
 
-function boot() {
+async function boot() {
+  const session = await getValidSession();
+  if (!session) {
+    renderAuthScreen();
+    return;
+  }
   if (!store.state.onboarded) {
     renderOnboarding();
   } else {
     renderShell();
   }
+}
+
+function renderAuthScreen() {
+  let mode = "signin"; // ou "signup"
+
+  function render() {
+    appRoot.innerHTML = `
+      <div class="onboarding-overlay">
+        <div class="onboarding-card">
+          <div class="onboarding-step">Estuda+</div>
+          <h1>${mode === "signin" ? "Entrar na sua conta" : "Criar sua conta"}</h1>
+          <p>${mode === "signin" ? "Acesse com seu e-mail e senha." : "Leva menos de um minuto."}</p>
+          <div id="auth-error-slot"></div>
+          <div class="field">
+            <label>${Icon("mail", { size: 12 })} E-mail</label>
+            <input type="email" id="auth-email" placeholder="voce@email.com" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label>${Icon("lock", { size: 12 })} Senha</label>
+            <input type="password" id="auth-password" placeholder="••••••••" autocomplete="${mode === "signin" ? "current-password" : "new-password"}" />
+          </div>
+          <button class="btn btn-primary" id="auth-submit" style="width:100%; justify-content:center;">
+            ${mode === "signin" ? "Entrar" : "Criar conta"}
+          </button>
+          <div class="auth-foot">
+            ${
+              mode === "signin"
+                ? `Ainda não tem conta? <button class="auth-switch" id="auth-toggle">Criar conta</button>`
+                : `Já tem conta? <button class="auth-switch" id="auth-toggle">Entrar</button>`
+            }
+          </div>
+        </div>
+      </div>`;
+
+    appRoot.querySelector("#auth-toggle").addEventListener("click", () => {
+      mode = mode === "signin" ? "signup" : "signin";
+      render();
+    });
+
+    const emailEl = appRoot.querySelector("#auth-email");
+    const passEl = appRoot.querySelector("#auth-password");
+    const submitBtn = appRoot.querySelector("#auth-submit");
+
+    const submit = async () => {
+      const email = emailEl.value.trim();
+      const password = passEl.value;
+      const errorSlot = appRoot.querySelector("#auth-error-slot");
+      errorSlot.innerHTML = "";
+      if (!email || !password) {
+        errorSlot.innerHTML = `<div class="auth-error">Preencha e-mail e senha.</div>`;
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = mode === "signin" ? "Entrando..." : "Criando conta...";
+      try {
+        if (mode === "signin") {
+          await signIn(email, password);
+          boot();
+        } else {
+          const { needsEmailConfirmation } = await signUp(email, password);
+          if (needsEmailConfirmation) {
+            errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#4b3fa0;">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Criar conta";
+            mode = "signin";
+          } else {
+            boot();
+          }
+        }
+      } catch (err) {
+        errorSlot.innerHTML = `<div class="auth-error">${escapeHtml(err.message)}</div>`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = mode === "signin" ? "Entrar" : "Criar conta";
+      }
+    };
+
+    submitBtn.addEventListener("click", submit);
+    passEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+  }
+
+  render();
 }
 
 const TIME_OPTIONS = [
@@ -242,9 +331,16 @@ function renderSidebar(sidebarEl) {
 
     <div class="sidebar-footer">
       <button class="icon-btn" id="edit-profile-btn" title="Editar perfil">${Icon("pencil", { size: 12 })}</button>
+      <button class="icon-btn" id="logout-btn" title="Sair${getCachedUser()?.email ? ` (${getCachedUser().email})` : ""}">${Icon("logOut", { size: 12 })}</button>
       <span>${store.state.profile?.name ? `Olá, ${escapeHtml(store.state.profile.name)}` : "Resumos e flashcards sincronizados"} · revisão espaçada Acertei/Errei</span>
     </div>
   `;
+
+  sidebarEl.querySelector("#logout-btn").addEventListener("click", async () => {
+    if (!confirm("Sair da sua conta?")) return;
+    await signOut();
+    boot();
+  });
 
   sidebarEl.querySelectorAll("[data-nav]").forEach((btn) => {
     btn.addEventListener("click", () => {

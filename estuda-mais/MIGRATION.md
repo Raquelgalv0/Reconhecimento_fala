@@ -32,9 +32,9 @@ Portar o estado hoje guardado em `store.js` (um objeto único no `localStorage`)
 
 Cada tabela leva `user_id` + política de RLS restringindo `auth.uid() = user_id`.
 
-## 2. Autenticação
+## 2. Autenticação (🟡 login feito, dados ainda não sincronizam)
 
-Trocar o onboarding atual (que só salva no `localStorage`) por cadastro/login real via Supabase Auth. O onboarding em si (escolha de modo, perfil, matérias) continua igual — só passa a gravar no banco em vez do navegador.
+O login (cadastro/entrada por e-mail e senha via Supabase Auth) já está implementado — veja a seção "Login" do `README.md`. O que falta desta etapa: hoje o onboarding (escolha de modo, perfil, matérias) e todos os dados do app continuam gravando só no `localStorage`, sem ligação real com a conta logada. Terminar esta etapa é trocar esses pontos de gravação para o banco de dados (item 1), usando o `user_id` da sessão já disponível em `js/auth.js`.
 
 ## 3. IA com Groq — mapeamento direto do `ai.js` atual (✅ já feito)
 

@@ -42,6 +42,9 @@ const PATHS = {
   pulse: '<path d="M3 12h3.5l1.8-5 3 10 2.2-8.5 1.5 3.5H21"/>',
   download: '<path d="M12 4.5v11"/><path d="M7.5 11 12 15.5 16.5 11"/><path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/>',
   menu: '<path d="M4 6.5h16"/><path d="M4 12h16"/><path d="M4 17.5h16"/>',
+  logOut: '<path d="M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10"/><path d="M15.5 8 19.5 12 15.5 16"/><path d="M19 12H9.5"/>',
+  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7 12 12.5 19.5 7"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {
