@@ -105,6 +105,54 @@ function houseSvg(kind) {
   </svg>`;
 }
 
+// ---- Cena de construção ao vivo (aparece durante a fase de estudo) ----
+// Quanto mais casas a cidade já tem, mais "avançado" o prédio que está sendo
+// erguido agora — dá um senso real de evolução, não só repete a casinha.
+const BUILDING_TIERS = [
+  { path: "M18,92 V60 L45,36 L72,60 V92 Z", color: "#c98a3c", windows: [[30, 70, 8, 8], [52, 70, 8, 8]] },
+  { path: "M10,92 V48 L45,20 L80,48 V92 Z", color: "#5b3f82", windows: [[26, 60, 9, 9], [55, 60, 9, 9], [26, 76, 9, 9], [55, 76, 9, 9]] },
+  { path: "M14,92 V38 L45,22 L76,38 V92 Z", color: "#2f9e6b", windows: [[22, 50, 8, 8], [42, 50, 8, 8], [62, 50, 8, 8], [22, 66, 8, 8], [42, 66, 8, 8], [62, 66, 8, 8]] },
+  { path: "M38,92 V12 H82 V92 Z", color: "#4d6fa3", windows: [[45, 22, 8, 8], [64, 22, 8, 8], [45, 38, 8, 8], [64, 38, 8, 8], [45, 54, 8, 8], [64, 54, 8, 8], [45, 70, 8, 8], [64, 70, 8, 8]] },
+];
+function buildingTierIndex(count) {
+  if (count >= 30) return 3;
+  if (count >= 15) return 2;
+  if (count >= 5) return 1;
+  return 0;
+}
+
+function mascotSvg(celebrate) {
+  return `<g class="cs-mascot ${celebrate ? "celebrate" : "working"}" transform="translate(90,72)">
+    <ellipse cx="0" cy="0" rx="11" ry="10" fill="#7f77dd"/>
+    <circle cx="-4" cy="-3" r="1.8" fill="#26215c"/>
+    <circle cx="4" cy="-3" r="1.8" fill="#26215c"/>
+    <path d="M-5,3 Q0,7 5,3" stroke="#26215c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <rect x="-9" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
+    <rect x="3" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
+    <g class="cs-mascot-arm">
+      <rect x="9" y="-6" width="10" height="4" rx="2" fill="#7f77dd"/>
+      <rect x="15" y="-12" width="4" height="10" rx="1.5" fill="#8a6a4f" transform="rotate(30 17 -7)"/>
+    </g>
+  </g>`;
+}
+
+function constructionSceneHtml(count) {
+  const tier = BUILDING_TIERS[buildingTierIndex(count)];
+  return `
+    <div class="construction-scene">
+      <svg class="construction-svg" viewBox="0 0 120 100">
+        <line class="cs-ground" x1="2" y1="92" x2="118" y2="92"></line>
+        <path class="cs-outline" d="${tier.path}"></path>
+        <clipPath id="cs-clip"><rect id="foco-clip-rect" x="0" y="92" width="120" height="0"></rect></clipPath>
+        <g clip-path="url(#cs-clip)">
+          <path class="cs-fill" d="${tier.path}" fill="${tier.color}"></path>
+          ${tier.windows.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="#fbe8b8" opacity="0.85"></rect>`).join("")}
+        </g>
+        ${mascotSvg(false)}
+      </svg>
+    </div>`;
+}
+
 export function renderFoco(container) {
   const state = ensureFocoState();
   const city = store.state.city || [];
@@ -180,33 +228,52 @@ function focusStageHtml(state) {
       </div>`;
   }
 
-  if (state.phase === "study" || state.phase === "break") {
-    const label = state.phase === "study" ? "Estudando" : "Pausa";
-    const totalMs = (state.phase === "study" ? state.studyMinutes : state.breakMinutes) * 60000;
+  if (state.phase === "study") {
+    const cityCount = (store.state.city || []).length;
     return `
       <div class="focus-running">
-        <div class="focus-phase-label ${state.phase === "break" ? "is-break" : ""}">${label}</div>
-        <div class="focus-ring-wrap ${state.phase === "break" ? "is-break" : ""}">
+        <div class="focus-phase-label">Construindo...</div>
+        <div class="focus-countdown focus-countdown--sm" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
+        ${constructionSceneHtml(cityCount)}
+        <div class="focus-progress-track"><div class="focus-progress-fill" id="foco-progress-fill"></div></div>
+        <button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>
+      </div>`;
+  }
+
+  if (state.phase === "break") {
+    const totalMs = state.breakMinutes * 60000;
+    return `
+      <div class="focus-running">
+        <div class="focus-phase-label is-break">Pausa · sua equipe descansa</div>
+        <div class="focus-ring-wrap is-break">
           <svg class="focus-ring" viewBox="0 0 120 120">
             <circle class="focus-ring-bg" cx="60" cy="60" r="52"></circle>
             <circle class="focus-ring-fg" id="foco-ring-fg" cx="60" cy="60" r="52" data-total-ms="${totalMs}"></circle>
           </svg>
           <div class="focus-countdown" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
         </div>
-        ${
-          state.phase === "study"
-            ? `<button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>`
-            : `<button class="btn btn-ghost" id="focus-skip-break">${Icon("checkPlain", { size: 14 })}<span>Pular pausa</span></button>`
-        }
+        <svg class="focus-resting-mascot" viewBox="0 0 40 20" width="70" height="34"><g transform="translate(20,12)"><ellipse cx="0" cy="0" rx="11" ry="8" fill="#7f77dd"/><path d="M-4,-4 h3 M-1,-7 v3" stroke="#26215c" stroke-width="1.2" stroke-linecap="round"/><text x="9" y="-6" font-size="8" fill="#5b3f82">zz</text></g></svg>
+        <button class="btn btn-ghost" id="focus-skip-break">${Icon("checkPlain", { size: 14 })}<span>Pular pausa</span></button>
       </div>`;
   }
 
   // study-done
+  const tier = BUILDING_TIERS[buildingTierIndex(Math.max(0, (store.state.city || []).length - 1))];
   return `
     <div class="focus-done">
       <div class="focus-done-house">
         <div class="confetti">${Array.from({ length: 10 }, (_, i) => `<span class="confetti-piece c${i % 5}"></span>`).join("")}</div>
-        ${houseSvg("casa2")}
+        <svg viewBox="0 0 120 100" width="100" height="84">
+          <path d="${tier.path}" fill="${tier.color}"></path>
+          <g class="cs-mascot celebrate" transform="translate(90,72)">
+            <ellipse cx="0" cy="0" rx="11" ry="10" fill="#7f77dd"/>
+            <circle cx="-4" cy="-3" r="1.8" fill="#26215c"/>
+            <circle cx="4" cy="-3" r="1.8" fill="#26215c"/>
+            <path d="M-5,2 Q0,8 5,2" stroke="#26215c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+            <rect x="-9" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
+            <rect x="3" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
+          </g>
+        </svg>
       </div>
       <h3>Casa construída!</h3>
       <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. Quer fazer uma pausa de ${state.breakMinutes} min?</p>
@@ -292,6 +359,7 @@ function wireStage(container, state) {
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+const BUILDING_TOP_Y = 92; // y do chão no viewBox da cena de construção
 
 function updateRing(container, remaining, totalMs) {
   const ring = container.querySelector("#foco-ring-fg");
@@ -301,9 +369,25 @@ function updateRing(container, remaining, totalMs) {
   ring.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - fraction)}`;
 }
 
+// Faz o prédio "subir" do chão conforme o tempo de estudo passa — a régua de
+// progresso embaixo também cresce junto, então dá pra sentir o avanço de
+// duas formas ao mesmo tempo (visual principal + barrinha).
+function updateConstruction(container, remaining, totalMs) {
+  const clipRect = container.querySelector("#foco-clip-rect");
+  const bar = container.querySelector("#foco-progress-fill");
+  const fractionDone = totalMs > 0 ? Math.max(0, Math.min(1, 1 - remaining / totalMs)) : 0;
+  const height = BUILDING_TOP_Y * fractionDone;
+  if (clipRect) {
+    clipRect.setAttribute("y", `${BUILDING_TOP_Y - height}`);
+    clipRect.setAttribute("height", `${height}`);
+  }
+  if (bar) bar.style.width = `${Math.round(fractionDone * 100)}%`;
+}
+
 function startTick(container, state) {
   const totalMs = (state.phase === "study" ? state.studyMinutes : state.breakMinutes) * 60000;
-  updateRing(container, state.endsAt - Date.now(), totalMs);
+  if (state.phase === "study") updateConstruction(container, state.endsAt - Date.now(), totalMs);
+  else updateRing(container, state.endsAt - Date.now(), totalMs);
 
   tickHandle = setInterval(() => {
     const remaining = state.endsAt - Date.now();
@@ -311,12 +395,19 @@ function startTick(container, state) {
       clearTick();
       if (state.phase === "study") {
         const minutes = state.studyMinutes;
+        const countBefore = (store.state.city || []).length;
+        const levelBefore = cityLevelInfo(countBefore).current.label;
         state.phase = "study-done";
         state.endsAt = null;
         saveFocoState();
         playChime();
         store.addCityBuilding(minutes); // dispara store.save() -> re-renderiza a tela inteira
-        showToast("Casa construída! Hora da pausa.", "checkPlain");
+        const levelAfter = cityLevelInfo(countBefore + 1).current.label;
+        if (levelAfter !== levelBefore) {
+          showToast(`Sua cidade agora é uma "${levelAfter}"!`, "landmark");
+        } else {
+          showToast("Casa construída! Hora da pausa.", "checkPlain");
+        }
       } else if (state.phase === "break") {
         state.phase = "idle";
         state.endsAt = null;
@@ -329,6 +420,7 @@ function startTick(container, state) {
     }
     const span = container.querySelector("#foco-countdown");
     if (span) span.textContent = formatMMSS(remaining);
-    updateRing(container, remaining, totalMs);
+    if (state.phase === "study") updateConstruction(container, remaining, totalMs);
+    else updateRing(container, remaining, totalMs);
   }, 250);
 }

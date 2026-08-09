@@ -917,6 +917,38 @@ mark.hl-azul { background: #c7dcf7; }
 .focus-ring-fg { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.25s linear; }
 .focus-ring-wrap.is-break .focus-ring-fg { stroke: var(--green); }
 .focus-countdown { font-family: var(--font-serif); font-size: 40px; font-weight: 600; color: var(--ink); position: relative; z-index: 1; }
+.focus-countdown--sm { font-size: 26px; margin-top: -4px; }
+.focus-resting-mascot { margin-top: -14px; }
+
+.construction-scene {
+  width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+  background: linear-gradient(to bottom, #eef1fb 0%, #eef1fb 70%, #dcefd9 70%, #c7e3c2 100%);
+}
+.construction-svg { display: block; width: 100%; height: 160px; }
+.cs-ground { stroke: #9fcf95; stroke-width: 1.5; }
+.cs-outline { fill: none; stroke: var(--accent); stroke-opacity: 0.35; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.cs-fill { transition: none; }
+.cs-mascot { transform-box: fill-box; transform-origin: center; }
+.cs-mascot.working { animation: mascot-bob 0.7s ease-in-out infinite alternate; }
+.cs-mascot-arm { transform-box: fill-box; transform-origin: 0% 50%; animation: arm-swing 0.4s ease-in-out infinite alternate; }
+.cs-mascot.celebrate { animation: mascot-jump 0.7s ease-in-out infinite; }
+
+.focus-progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.focus-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--amber)); border-radius: 999px; transition: width 0.25s linear; }
+
+@keyframes mascot-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2px) rotate(-2deg); }
+}
+@keyframes arm-swing {
+  from { transform: rotate(-12deg); }
+  to { transform: rotate(18deg); }
+}
+@keyframes mascot-jump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-8px) scale(1.05); }
+  50% { transform: translateY(0) scale(0.97); }
+}
 
 .focus-done { padding: 10px 0; }
 .focus-done-house { position: relative; display: flex; justify-content: center; margin-bottom: 10px; }
