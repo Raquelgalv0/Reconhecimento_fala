@@ -82,6 +82,31 @@ export function playFeedbackSound(correct) {
   }
 }
 
+// Sininho de 3 notas subindo (dó-mi-sol) — avisa uma troca de fase na tela
+// de Foco: quando o tempo de estudo acaba e começa a pausa, ou quando a
+// pausa acaba e é hora de voltar a estudar.
+export function playChime() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const tone = (freq, start, dur, peak) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now + start);
+    gain.gain.setValueAtTime(0, now + start);
+    gain.gain.linearRampToValueAtTime(peak, now + start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + start);
+    osc.stop(now + start + dur + 0.02);
+  };
+  tone(523.25, 0, 0.35, 0.16);
+  tone(659.25, 0.12, 0.35, 0.16);
+  tone(783.99, 0.24, 0.5, 0.18);
+}
+
 let toastTimer = null;
 export function showToast(message, iconName = "checkPlain") {
   let toastEl = document.getElementById("toast");

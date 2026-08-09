@@ -2,7 +2,7 @@
 // sessão de estudo concluída sem cancelar constrói uma casa. As casas vão se
 // acumulando numa cidade (em vez da floresta do Forest).
 import { store } from "../store.js";
-import { showToast } from "../ui-utils.js";
+import { showToast, playChime } from "../ui-utils.js";
 import { Icon } from "../icons.js";
 
 const STUDY_PRESETS = [15, 25, 50];
@@ -14,6 +14,43 @@ const HOUSE_COLORS = {
   casa3: { wall: "#c9e3d3", roof: "#2f9e6b" },
   casa4: { wall: "#f3d9c9", roof: "#c98a3c" },
 };
+
+// Níveis da cidade — puramente cosmético, dá o "senso de progresso" tipo jogo.
+const CITY_LEVELS = [
+  { min: 0, label: "Terreno vazio", icon: "house" },
+  { min: 1, label: "Vila iniciante", icon: "house" },
+  { min: 5, label: "Cidadezinha", icon: "landmark" },
+  { min: 15, label: "Cidade grande", icon: "landmark" },
+  { min: 30, label: "Metrópole", icon: "landmark" },
+  { min: 60, label: "Megalópole dos estudos", icon: "landmark" },
+];
+
+function cityLevelInfo(count) {
+  let current = CITY_LEVELS[0];
+  let next = CITY_LEVELS[1];
+  for (let i = 0; i < CITY_LEVELS.length; i++) {
+    if (count >= CITY_LEVELS[i].min) {
+      current = CITY_LEVELS[i];
+      next = CITY_LEVELS[i + 1] || null;
+    }
+  }
+  const progress = next ? Math.min(100, Math.round(((count - current.min) / (next.min - current.min)) * 100)) : 100;
+  return { current, next, progress };
+}
+
+// Dias seguidos (incluindo hoje) com pelo menos 1 casa construída — igual
+// espírito do streak de flashcard, mas calculado direto do array de casas,
+// sem precisar guardar nada a mais.
+function focusStreakDays(city) {
+  const daysWithBuild = new Set(city.map((b) => new Date(b.builtAt).toISOString().slice(0, 10)));
+  let streak = 0;
+  for (let n = 0; ; n++) {
+    const key = new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+    if (daysWithBuild.has(key)) streak++;
+    else break;
+  }
+  return streak;
+}
 
 // Estado da sessão em andamento — não é dado do app (não entra no store),
 // só controla o timer na tela. Persistido no localStorage pra sobreviver a
@@ -72,6 +109,8 @@ export function renderFoco(container) {
   const state = ensureFocoState();
   const city = store.state.city || [];
   const totalMinutes = city.reduce((sum, b) => sum + (b.minutes || 0), 0);
+  const { current, next, progress } = cityLevelInfo(city.length);
+  const streak = focusStreakDays(city);
 
   container.innerHTML = `
     <div class="main-header">
@@ -79,20 +118,38 @@ export function renderFoco(container) {
         <h1>Foco</h1>
         <p class="sub">Estude sem distração. Cada sessão concluída constrói uma casa na sua cidade.</p>
       </div>
+      ${streak > 0 ? `<div class="focus-streak-badge">${Icon("flame", { size: 15 })}<span>${streak} dia${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</span></div>` : ""}
     </div>
     <div class="focus-layout">
       <div class="panel focus-timer-card">
         ${focusStageHtml(state)}
       </div>
       <div class="panel focus-city-card">
-        <h3>${Icon("landmark", { size: 16 })}<span>Sua cidade</span></h3>
+        <div class="city-card-header">
+          <h3>${Icon("landmark", { size: 16 })}<span>Sua cidade</span></h3>
+          <span class="city-level-badge">${Icon(current.icon, { size: 12 })}${current.label}</span>
+        </div>
         <div class="city-stats">${city.length} casa${city.length === 1 ? "" : "s"} construída${city.length === 1 ? "" : "s"} · ${totalMinutes} min focados</div>
-        <div class="city-grid">
-          ${
-            city.length === 0
-              ? `<div class="empty-state" style="padding:30px 10px;"><div class="big">${Icon("landmark", { size: 26 })}</div>Sua cidade está vazia. Complete uma sessão de foco pra construir a primeira casa.</div>`
-              : city.map((b) => `<div class="city-house" title="${new Date(b.builtAt).toLocaleDateString("pt-BR")} · ${b.minutes} min">${houseSvg(b.kind)}</div>`).join("")
-          }
+        ${
+          next
+            ? `<div class="city-level-progress"><div class="city-level-bar" style="width:${progress}%"></div></div>
+               <div class="city-level-hint">${next.min - city.length} casa${next.min - city.length === 1 ? "" : "s"} pra virar "${next.label}"</div>`
+            : `<div class="city-level-hint">Nível máximo da cidade — você é imparável.</div>`
+        }
+        <div class="city-scene">
+          <div class="city-sky"><span class="city-sun"></span><span class="city-cloud c1"></span><span class="city-cloud c2"></span></div>
+          <div class="city-grid">
+            ${
+              city.length === 0
+                ? `<div class="empty-state" style="padding:20px 10px;"><div class="big">${Icon("landmark", { size: 26 })}</div>Sua cidade está vazia. Complete uma sessão de foco pra construir a primeira casa.</div>`
+                : city
+                    .map(
+                      (b, i) =>
+                        `<div class="city-house" style="animation-delay:${Math.min(i, 20) * 0.03}s" title="${new Date(b.builtAt).toLocaleDateString("pt-BR")} · ${b.minutes} min">${houseSvg(b.kind)}</div>`
+                    )
+                    .join("")
+            }
+          </div>
         </div>
       </div>
     </div>
@@ -125,10 +182,17 @@ function focusStageHtml(state) {
 
   if (state.phase === "study" || state.phase === "break") {
     const label = state.phase === "study" ? "Estudando" : "Pausa";
+    const totalMs = (state.phase === "study" ? state.studyMinutes : state.breakMinutes) * 60000;
     return `
       <div class="focus-running">
         <div class="focus-phase-label ${state.phase === "break" ? "is-break" : ""}">${label}</div>
-        <div class="focus-countdown" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
+        <div class="focus-ring-wrap ${state.phase === "break" ? "is-break" : ""}">
+          <svg class="focus-ring" viewBox="0 0 120 120">
+            <circle class="focus-ring-bg" cx="60" cy="60" r="52"></circle>
+            <circle class="focus-ring-fg" id="foco-ring-fg" cx="60" cy="60" r="52" data-total-ms="${totalMs}"></circle>
+          </svg>
+          <div class="focus-countdown" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
+        </div>
         ${
           state.phase === "study"
             ? `<button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>`
@@ -140,7 +204,10 @@ function focusStageHtml(state) {
   // study-done
   return `
     <div class="focus-done">
-      <div class="focus-done-house">${houseSvg("casa2")}</div>
+      <div class="focus-done-house">
+        <div class="confetti">${Array.from({ length: 10 }, (_, i) => `<span class="confetti-piece c${i % 5}"></span>`).join("")}</div>
+        ${houseSvg("casa2")}
+      </div>
       <h3>Casa construída!</h3>
       <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. Quer fazer uma pausa de ${state.breakMinutes} min?</p>
       <div class="btn-row" style="justify-content:center;">
@@ -224,7 +291,20 @@ function wireStage(container, state) {
   }
 }
 
+const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+
+function updateRing(container, remaining, totalMs) {
+  const ring = container.querySelector("#foco-ring-fg");
+  if (!ring) return;
+  const fraction = totalMs > 0 ? Math.max(0, Math.min(1, remaining / totalMs)) : 0;
+  ring.style.strokeDasharray = `${RING_CIRCUMFERENCE}`;
+  ring.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - fraction)}`;
+}
+
 function startTick(container, state) {
+  const totalMs = (state.phase === "study" ? state.studyMinutes : state.breakMinutes) * 60000;
+  updateRing(container, state.endsAt - Date.now(), totalMs);
+
   tickHandle = setInterval(() => {
     const remaining = state.endsAt - Date.now();
     if (remaining <= 0) {
@@ -234,12 +314,14 @@ function startTick(container, state) {
         state.phase = "study-done";
         state.endsAt = null;
         saveFocoState();
+        playChime();
         store.addCityBuilding(minutes); // dispara store.save() -> re-renderiza a tela inteira
-        showToast("Casa construída! Sessão de foco concluída.", "checkPlain");
+        showToast("Casa construída! Hora da pausa.", "checkPlain");
       } else if (state.phase === "break") {
         state.phase = "idle";
         state.endsAt = null;
         saveFocoState();
+        playChime();
         showToast("Pausa concluída. Pronta pra outra sessão?", "flame");
         renderFoco(container);
       }
@@ -247,5 +329,6 @@ function startTick(container, state) {
     }
     const span = container.querySelector("#foco-countdown");
     if (span) span.textContent = formatMMSS(remaining);
+    updateRing(container, remaining, totalMs);
   }, 250);
 }
