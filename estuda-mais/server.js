@@ -96,6 +96,7 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(result));
       } catch (err) {
+        console.error("Erro em /api/ai:", err);
         res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ error: err.message }));
       }

@@ -19,8 +19,11 @@ create table if not exists folders (
   id text primary key,
   user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
   name text not null,
-  parent_id text references folders(id) on delete cascade
+  parent_id text references folders(id) on delete cascade,
+  kind text not null default 'pasta'
 );
+-- Garante a coluna em bancos que já tinham a tabela criada antes desta versão.
+alter table folders add column if not exists kind text not null default 'pasta';
 
 -- ---------- summaries ----------
 create table if not exists summaries (
@@ -30,9 +33,12 @@ create table if not exists summaries (
   title text not null default 'Sem título',
   content_html text not null default '',
   page_style text not null default 'minimal',
+  font_family text not null default 'padrao',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Garante a coluna em bancos que já tinham a tabela criada antes desta versão.
+alter table summaries add column if not exists font_family text not null default 'padrao';
 
 -- ---------- flashcards ----------
 create table if not exists flashcards (
@@ -83,6 +89,26 @@ create table if not exists daily_log (
   primary key (user_id, day)
 );
 
+-- ---------- checklists (calendário do painel + metas do dia/semana/mês) ----------
+-- period: 'day' | 'week' | 'month'. period_key: '2026-08-09' | '2026-W32' | '2026-08'.
+create table if not exists checklists (
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  period text not null,
+  period_key text not null,
+  items jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, period, period_key)
+);
+
+-- ---------- city_buildings (cidade de foco: 1 casa por sessão concluída) ----------
+create table if not exists city_buildings (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  kind text not null default 'casa1',
+  minutes int not null default 0,
+  built_at timestamptz not null default now()
+);
+
 -- ---------- RLS: cada usuário só acessa suas próprias linhas ----------
 alter table profiles enable row level security;
 alter table folders enable row level security;
@@ -91,6 +117,8 @@ alter table flashcards enable row level security;
 alter table questions enable row level security;
 alter table question_attempts enable row level security;
 alter table daily_log enable row level security;
+alter table checklists enable row level security;
+alter table city_buildings enable row level security;
 
 drop policy if exists "own profile" on profiles;
 create policy "own profile" on profiles for all using (auth.uid() = id) with check (auth.uid() = id);
@@ -112,3 +140,9 @@ create policy "own question_attempts" on question_attempts for all using (auth.u
 
 drop policy if exists "own daily_log" on daily_log;
 create policy "own daily_log" on daily_log for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "own checklists" on checklists;
+create policy "own checklists" on checklists for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "own city_buildings" on city_buildings;
+create policy "own city_buildings" on city_buildings for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

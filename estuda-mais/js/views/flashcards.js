@@ -1,5 +1,5 @@
 import { store } from "../store.js";
-import { showToast, openModal, closeModal, relativeDue } from "../ui-utils.js";
+import { showToast, openModal, closeModal, relativeDue, playFeedbackSound } from "../ui-utils.js";
 import { scheduleNext, isDueToday } from "../srs.js";
 import { Icon } from "../icons.js";
 
@@ -27,7 +27,7 @@ function renderDecksGrid(container) {
     <div class="main-header">
       <div>
         <h1>Flashcards</h1>
-        <p class="sub">Baralhos organizados por assunto — sincronizados automaticamente com os resumos.</p>
+        <p class="sub">Baralhos organizados por assunto, sincronizados automaticamente com os resumos.</p>
       </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="btn-new-card">${Icon("plus", { size: 14 })}<span>Novo flashcard</span></button>
@@ -93,7 +93,8 @@ function renderDeckDetail(container, deckId) {
       ${cards
         .map(
           (c) => `
-        <div class="flash-row" data-card="${c.id}">
+        <div class="flash-row" data-card="${c.id}" draggable="true" title="Arraste pra um assunto na barra lateral pra mover">
+          <span class="drag-handle">${Icon("menu", { size: 13 })}</span>
           <span class="front">${esc(c.front)}</span>
           <span class="due-tag ${isDueToday(c) ? "today" : ""}">${isDueToday(c) ? "revisar hoje" : `próx. rev. ${relativeDue(c.srs.dueDate)}`}</span>
           <button class="btn btn-sm btn-ghost" data-edit="${c.id}">${Icon("pencil", { size: 13 })}</button>
@@ -102,6 +103,7 @@ function renderDeckDetail(container, deckId) {
         .join("")}
     </div>
     ${cards.length === 0 ? `<div class="empty-state"><div class="big">${Icon("layers", { size: 30 })}</div>Nenhum flashcard neste baralho ainda.</div>` : ""}
+    ${cards.length > 0 ? `<div class="field-hint" style="margin-top:8px;">Dica: arraste um flashcard pra cima de um assunto na barra lateral pra mover ele de pasta.</div>` : ""}
   `;
 
   container.querySelector("#back").addEventListener("click", () => store.setRoute("flashcards", { activeDeckId: null }));
@@ -112,6 +114,14 @@ function renderDeckDetail(container, deckId) {
       e.stopPropagation();
       openEditCardModal(btn.dataset.edit);
     });
+  });
+  container.querySelectorAll(".flash-row[draggable]").forEach((row) => {
+    row.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("application/x-flashcard-id", row.dataset.card);
+      e.dataTransfer.effectAllowed = "move";
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
   });
 }
 
@@ -133,7 +143,7 @@ function openManualCardModal(defaultFolderId) {
   openModal(
     `
     <h3>Novo flashcard</h3>
-    <p class="modal-sub">Criação manual — estilo Anki, com frente, verso e dica.</p>
+    <p class="modal-sub">Criação manual, estilo Anki: frente, verso e dica.</p>
     <div class="field">
       <label>Frente (pergunta)</label>
       <textarea id="f-front" placeholder="Ex.: O que é...?"></textarea>
@@ -149,7 +159,7 @@ function openManualCardModal(defaultFolderId) {
     <div class="field">
       <label>Dica</label>
       <input type="text" id="f-hint" value="${esc(store.folderPath(initialFolder))}" />
-      <div class="field-hint">Por padrão é o nome do baralho — pode personalizar.</div>
+      <div class="field-hint">Por padrão é o nome do baralho, mas pode personalizar.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>
@@ -192,6 +202,7 @@ function openEditCardModal(cardId) {
     <h3>Editar flashcard</h3>
     <div class="field"><label>Frente</label><textarea id="f-front">${esc(card.front)}</textarea></div>
     <div class="field"><label>Verso</label><textarea id="f-back">${esc(card.back)}</textarea></div>
+    <div class="field"><label>Pasta</label><select id="f-folder">${folderOptionsHtml(card.folderId)}</select></div>
     <div class="field"><label>Dica</label><input type="text" id="f-hint" value="${esc(card.hint || store.folderPath(card.folderId))}" /></div>
     <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn btn-ghost" id="delete" style="color:var(--red)">${Icon("trash", { size: 14 })}<span>Excluir</span></button>
@@ -214,6 +225,7 @@ function openEditCardModal(cardId) {
           store.updateFlashcard(cardId, {
             front: modal.querySelector("#f-front").value.trim(),
             back: modal.querySelector("#f-back").value.trim(),
+            folderId: modal.querySelector("#f-folder").value,
             hint: modal.querySelector("#f-hint").value.trim(),
           });
           closeModal();
@@ -262,7 +274,7 @@ function renderReview(container, deckId) {
     session.index++;
     return renderReview(container, deckId);
   }
-  const hintText = card.hint || store.folderPath(card.folderId);
+  const folderName = store.folderPath(card.folderId);
 
   container.innerHTML = `
     <div class="review-stage">
@@ -270,12 +282,13 @@ function renderReview(container, deckId) {
       <div class="flip-card">
         <div class="flip-card-inner" id="flip-inner">
           <div class="flip-face front">
-            <div class="hint-chip" id="hint-chip" title="Clique para ver a dica">${Icon("lightbulb", { size: 12 })}<span>dica</span></div>
+            <div class="card-folder-label">${esc(folderName)}</div>
             <div class="kicker">Pergunta</div>
             <div class="content">${esc(card.front)}</div>
             <div class="flip-hint">clique no cartão para virar</div>
           </div>
           <div class="flip-face back">
+            <div class="card-folder-label">${esc(folderName)}</div>
             <div class="kicker">Resposta</div>
             <div class="content">${esc(card.back)}</div>
           </div>
@@ -285,7 +298,6 @@ function renderReview(container, deckId) {
         <button class="btn-erro" id="btn-errei">${Icon("x", { size: 15 })}<span>Errei</span></button>
         <button class="btn-acerto" id="btn-acertei">${Icon("checkPlain", { size: 15 })}<span>Acertei</span></button>
       </div>
-      <div class="flip-tip">baseado em Acertei/Errei — o intervalo cresce a cada acerto (2, 4, 8, 15, 30 dias...)</div>
     </div>`;
 
   const inner = container.querySelector("#flip-inner");
@@ -294,15 +306,13 @@ function renderReview(container, deckId) {
     inner.classList.toggle("flipped");
     actions.style.visibility = inner.classList.contains("flipped") ? "visible" : "hidden";
   });
-  container.querySelector("#hint-chip").addEventListener("click", (e) => {
-    e.stopPropagation();
-    showToast(`Assunto: ${hintText}`, "lightbulb");
-  });
 
   const grade = (result) => {
+    playFeedbackSound(result === "acertou");
     scheduleNext(card, result);
     store.updateFlashcard(card.id, { srs: card.srs });
     store.logStudyDay({ correct: result === "acertou" });
+    store.markFlashcardReviewedToday();
     session.index++;
   };
   container.querySelector("#btn-errei").addEventListener("click", (e) => {

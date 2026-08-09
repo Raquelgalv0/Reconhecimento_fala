@@ -44,10 +44,15 @@ export function buildPrompt(task, params) {
       };
     }
     case "questions": {
-      const { text, count } = params;
+      const { text, count, style } = params;
+      const isClinical = style === "clinico";
       return {
-        system: `Você cria questões de múltipla escolha (estilo prova) a partir de um material de aula, com 4 alternativas (A a D), sendo só uma correta. ${common}`,
-        user: `Material:\n"""${text}"""\n\nGere exatamente ${count} questões distintas, cada uma com exatamente 4 alternativas e apenas um "correctId" correto.\nResponda em JSON: {"questions": [{"statement": "...", "alternatives": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}], "correctId": "A"}]}`,
+        system: isClinical
+          ? `Você cria questões de múltipla escolha em formato de caso clínico (estilo prova de Medicina), a partir de um material de aula, com 4 alternativas (A a D), sendo só uma correta. ${common}`
+          : `Você cria questões de múltipla escolha conceituais (estilo prova) a partir de um material de aula, com 4 alternativas (A a D), sendo só uma correta. ${common}`,
+        user: isClinical
+          ? `Material:\n"""${text}"""\n\nGere exatamente ${count} questões distintas de caso clínico: cada enunciado deve descrever um breve caso (paciente, idade, sintomas, achados relevantes) baseado nos conceitos do material, terminando numa pergunta objetiva sobre conduta, diagnóstico ou fisiopatologia. Cada questão com exatamente 4 alternativas e apenas um "correctId" correto.\nResponda em JSON: {"questions": [{"statement": "...", "alternatives": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}], "correctId": "A"}]}`
+          : `Material:\n"""${text}"""\n\nGere exatamente ${count} questões distintas, cada uma com exatamente 4 alternativas e apenas um "correctId" correto.\nResponda em JSON: {"questions": [{"statement": "...", "alternatives": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}], "correctId": "A"}]}`,
       };
     }
     case "mindmap": {

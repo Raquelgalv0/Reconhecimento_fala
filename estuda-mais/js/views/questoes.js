@@ -61,7 +61,7 @@ function renderList(container) {
     <div class="main-header">
       <div>
         <h1>Banco de Questões</h1>
-        <p class="sub">Cadastre, pratique e acompanhe onde você mais erra — por assunto, banca e dificuldade.</p>
+        <p class="sub">Cadastre, pratique e acompanhe onde você mais erra: por assunto, banca e dificuldade.</p>
       </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="btn-new-question">${Icon("plus", { size: 14 })}<span>Nova questão</span></button>
@@ -180,7 +180,7 @@ function openQuestionModal(questionId) {
   openModal(
     `
     <h3>${editing ? "Editar questão" : "Nova questão"}</h3>
-    <p class="modal-sub">Organize por assunto, banca, ano e dificuldade — igual ao seu caderno de questões.</p>
+    <p class="modal-sub">Organize por assunto, banca, ano e dificuldade, igual ao seu caderno de questões.</p>
     <div class="field">
       <label>Enunciado</label>
       <textarea id="q-statement" style="min-height:80px">${editing ? esc(editing.statement) : ""}</textarea>
@@ -403,7 +403,7 @@ function renderPractice(container) {
           answered
             ? `<div class="practice-feedback ${answered === q.correctId ? "ok" : "bad"}">
                 ${answered === q.correctId ? Icon("checkPlain", { size: 14 }) : Icon("x", { size: 14 })}
-                <span>${answered === q.correctId ? "Você acertou!" : `Você errou — o gabarito é ${q.correctId}.`}</span>
+                <span>${answered === q.correctId ? "Você acertou!" : `Você errou. O gabarito é ${q.correctId}.`}</span>
               </div>`
             : ""
         }

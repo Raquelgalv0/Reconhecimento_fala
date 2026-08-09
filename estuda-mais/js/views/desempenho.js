@@ -35,7 +35,7 @@ export function renderDesempenho(container) {
     <div class="main-header">
       <div>
         <h1>Desempenho</h1>
-        <p class="sub">Sua evolução ao longo do tempo — sequência de estudo, tempo dedicado e onde focar.</p>
+        <p class="sub">Sua evolução ao longo do tempo: sequência de estudo, tempo dedicado e onde focar.</p>
       </div>
     </div>
 

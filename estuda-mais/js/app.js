@@ -5,6 +5,7 @@ import { renderFlashcards } from "./views/flashcards.js";
 import { renderQuestoes } from "./views/questoes.js";
 import { renderDesempenho } from "./views/desempenho.js";
 import { renderUpload } from "./views/upload.js";
+import { renderFoco } from "./views/foco.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
@@ -149,7 +150,7 @@ function renderOnboarding() {
         <div class="onboarding-card">
           <div class="onboarding-step">Etapa 1 de 2</div>
           <h1>Bem-vinda ao Estuda+</h1>
-          <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso — sem precisar de apps diferentes.</p>
+          <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso, sem precisar de apps diferentes.</p>
           <div id="mode-list"></div>
           <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Continuar</button>
         </div>
@@ -185,7 +186,7 @@ function renderOnboarding() {
         <div class="onboarding-card">
           <div class="onboarding-step">Etapa 2 de 2</div>
           <h1>Conte um pouco sobre você</h1>
-          <p>Isso ajuda a personalizar seu painel e suas metas — pode pular e preencher depois.</p>
+          <p>Isso ajuda a personalizar seu painel e suas metas (pode pular e preencher depois).</p>
           <div class="field">
             <label>Nome</label>
             <input type="text" id="ob-name" placeholder="Como podemos te chamar?" />
@@ -260,12 +261,20 @@ function renderShell() {
       <nav class="sidebar" id="sidebar"></nav>
       <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
       <button class="mobile-menu-btn" id="mobile-menu-btn" title="Menu">${Icon("menu", { size: 18 })}</button>
+      <div class="notif-wrap" id="notif-wrap">
+        <button class="notif-bell" id="notif-bell" title="Notificações">${Icon("bell", { size: 17 })}<span class="notif-badge" id="notif-badge" hidden></span></button>
+        <div class="notif-dropdown" id="notif-dropdown" hidden></div>
+      </div>
       <main class="main" id="main"></main>
     </div>`;
 
   const sidebarEl = appRoot.querySelector("#sidebar");
   const mainEl = appRoot.querySelector("#main");
   const backdropEl = appRoot.querySelector("#sidebar-backdrop");
+  const notifBell = appRoot.querySelector("#notif-bell");
+  const notifBadge = appRoot.querySelector("#notif-badge");
+  const notifDropdown = appRoot.querySelector("#notif-dropdown");
+  let notifOpen = false;
 
   const closeMobileSidebar = () => {
     sidebarEl.classList.remove("mobile-open");
@@ -281,8 +290,55 @@ function renderShell() {
     if (e.target.closest("[data-nav], [data-folder]")) closeMobileSidebar();
   });
 
+  const renderNotifDropdown = (notifications) => {
+    if (notifications.length === 0) {
+      notifDropdown.innerHTML = `<div class="notif-empty">Nenhum aviso por aqui. Tudo em dia!</div>`;
+      return;
+    }
+    notifDropdown.innerHTML = notifications
+      .map(
+        (n) => `
+      <button class="notif-item" data-notif-route="${n.route}">
+        <span class="notif-item-icon">${Icon(n.icon, { size: 15 })}</span>
+        <span class="notif-item-text"><b>${n.title}</b><span>${n.desc}</span></span>
+      </button>`
+      )
+      .join("");
+    notifDropdown.querySelectorAll("[data-notif-route]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        store.setRoute(btn.dataset.notifRoute, { activeDeckId: null, reviewing: false });
+        notifOpen = false;
+        notifDropdown.hidden = true;
+      });
+    });
+  };
+
+  const renderNotifBell = () => {
+    const notifications = store.getNotifications();
+    if (notifications.length > 0) {
+      notifBadge.hidden = false;
+      notifBadge.textContent = notifications.length;
+    } else {
+      notifBadge.hidden = true;
+    }
+    renderNotifDropdown(notifications);
+  };
+
+  notifBell.addEventListener("click", (e) => {
+    e.stopPropagation();
+    notifOpen = !notifOpen;
+    notifDropdown.hidden = !notifOpen;
+  });
+  document.addEventListener("click", (e) => {
+    if (notifOpen && !e.target.closest("#notif-wrap")) {
+      notifOpen = false;
+      notifDropdown.hidden = true;
+    }
+  });
+
   const safeRender = () => {
     renderSidebar(sidebarEl);
+    renderNotifBell();
     const active = document.activeElement;
     const typingInEditor = active && active.closest && active.closest("[data-focus-guard]");
     if (!typingInEditor) renderMain(mainEl);
@@ -306,6 +362,7 @@ function renderMain(mainEl) {
   if (route === "questoes") return renderQuestoes(mainEl);
   if (route === "desempenho") return renderDesempenho(mainEl);
   if (route === "upload") return renderUpload(mainEl);
+  if (route === "foco") return renderFoco(mainEl);
   return renderDashboard(mainEl);
 }
 
@@ -327,6 +384,7 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
       <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
       <button class="nav-item ${route === "upload" ? "active" : ""}" data-nav="upload">${Icon("upload")}<span>Upload de Materiais</span></button>
+      <button class="nav-item ${route === "foco" ? "active" : ""}" data-nav="foco">${Icon("clock")}<span>Foco</span></button>
     </div>
 
     <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
@@ -334,8 +392,8 @@ function renderSidebar(sidebarEl) {
       ${folders
         .map(
           (f) => `
-        <div class="folder-row ${f.depth > 0 ? "sub" : ""}" data-folder="${f.id}">
-          ${f.depth > 0 ? "" : Icon("folder", { size: 14 })}<span>${escapeHtml(f.name)}</span>
+        <div class="folder-row ${f.depth > 0 ? "sub" : ""} ${f.kind === "caderno" ? "caderno-row" : ""}" data-folder="${f.id}">
+          ${f.depth > 0 ? "" : Icon(f.kind === "caderno" ? "notebook" : "folder", { size: 14, cls: "folder-icon" })}<span>${escapeHtml(f.name)}</span>
           <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
           <button class="icon-btn" data-add-sub="${f.id}" title="Nova subpasta">${Icon("plus", { size: 12 })}</button>
         </div>`
@@ -365,6 +423,7 @@ function renderSidebar(sidebarEl) {
       else if (target === "questoes") store.setRoute("questoes", { activeQuestionFolderId: null, questionFilter: "all", practicing: false });
       else if (target === "desempenho") store.setRoute("desempenho");
       else if (target === "upload") store.setRoute("upload");
+      else if (target === "foco") store.setRoute("foco");
       else store.setRoute("dashboard");
     });
   });
@@ -380,6 +439,21 @@ function renderSidebar(sidebarEl) {
       } else {
         store.setRoute("resumos", { activeFolderId: folderId, activeSummaryId: null });
       }
+    });
+    // Soltar um flashcard arrastado aqui move ele pra este assunto/pasta.
+    row.addEventListener("dragover", (e) => {
+      if (!e.dataTransfer.types.includes("application/x-flashcard-id")) return;
+      e.preventDefault();
+      row.classList.add("drop-target");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("drop-target"));
+    row.addEventListener("drop", (e) => {
+      row.classList.remove("drop-target");
+      const cardId = e.dataTransfer.getData("application/x-flashcard-id");
+      if (!cardId) return;
+      e.preventDefault();
+      store.updateFlashcard(cardId, { folderId: row.dataset.folder });
+      showToast(`Flashcard movido pra "${store.folderPath(row.dataset.folder)}".`, "folder");
     });
   });
 
@@ -433,7 +507,7 @@ function openProfileModal() {
         <button type="button" class="btn btn-ghost btn-sm" id="import-data-btn">${Icon("upload", { size: 13 })}<span>Importar</span></button>
         <input type="file" id="import-data-file" accept="application/json" style="display:none" />
       </div>
-      <div class="field-hint">Seus dados ficam só neste navegador — exporte de vez em quando para não perder nada.</div>
+      <div class="field-hint">Seus dados ficam só neste navegador. Exporte de vez em quando para não perder nada.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>

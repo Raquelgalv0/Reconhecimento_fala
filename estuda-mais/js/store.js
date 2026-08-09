@@ -22,6 +22,8 @@ function emptyState() {
     questionAttempts: [],
     dailyGoal: 10,
     dailyLog: {},
+    checklists: { day: {}, week: {}, month: {} },
+    city: [],
     ui: {
       route: "dashboard",
       activeFolderId: null,
@@ -39,8 +41,8 @@ function emptyState() {
 // (snake_case). Mantém store.js como a única peça que sabe desse mapeamento
 // — o resto do app continua lendo store.state exatamente como antes. ----
 const mapFolder = {
-  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId }),
-  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id }),
+  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId, kind: f.kind || "pasta" }),
+  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id, kind: r.kind || "pasta" }),
 };
 const mapSummary = {
   toDb: (s, userId) => ({
@@ -50,6 +52,7 @@ const mapSummary = {
     title: s.title,
     content_html: s.contentHtml,
     page_style: s.pageStyle,
+    font_family: s.fontFamily,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   }),
@@ -59,6 +62,7 @@ const mapSummary = {
     title: r.title,
     contentHtml: r.content_html,
     pageStyle: r.page_style,
+    fontFamily: r.font_family || "padrao",
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }),
@@ -146,6 +150,57 @@ class Store {
     return `estuda-mais:v2:${this.userId}`;
   }
 
+  // Guardado direto no localStorage (fora do state que é reconstruído no
+  // hydrate()) só pra saber se a pessoa pulou um dia sem revisar flashcard —
+  // não precisa sincronizar entre dispositivos, é só um lembrete local.
+  flashcardStreakKey() {
+    return `estuda-mais:last-flashcard-day:${this.userId}`;
+  }
+  markFlashcardReviewedToday() {
+    try {
+      localStorage.setItem(this.flashcardStreakKey(), dayKey(new Date()));
+    } catch {
+      // não crítico
+    }
+  }
+  // true se a pessoa já revisou flashcard alguma vez, mas não ontem nem hoje
+  // (ou seja, pulou pelo menos um dia inteiro sem revisar).
+  missedFlashcardDay() {
+    try {
+      const last = localStorage.getItem(this.flashcardStreakKey());
+      if (!last) return false;
+      const todayKey = dayKey(new Date());
+      const yesterdayKey = dayKey(new Date(Date.now() - 86400000));
+      return last !== todayKey && last !== yesterdayKey;
+    } catch {
+      return false;
+    }
+  }
+  // Lista de avisos pro sininho de notificações no topo do app.
+  getNotifications() {
+    const list = [];
+    if (this.missedFlashcardDay()) {
+      list.push({
+        id: "missed-day",
+        icon: "flame",
+        title: "Você pulou um dia sem revisar flashcards.",
+        desc: "Retome agora pra não perder o ritmo.",
+        route: "flashcards",
+      });
+    }
+    const dueToday = this.cardsDueToday().length;
+    if (dueToday > 0) {
+      list.push({
+        id: "due-today",
+        icon: "repeat",
+        title: `${dueToday} flashcard${dueToday === 1 ? "" : "s"} para revisar hoje.`,
+        desc: "Bora manter a sequência em dia.",
+        route: "flashcards",
+      });
+    }
+    return list;
+  }
+
   save() {
     if (this.userId) {
       try {
@@ -176,7 +231,7 @@ class Store {
     this.session = session;
     this.userId = session.user.id;
     try {
-      const [profileRows, folderRows, summaryRows, cardRows, questionRows, attemptRows, dailyRows] = await Promise.all([
+      const [profileRows, folderRows, summaryRows, cardRows, questionRows, attemptRows, dailyRows, checklistRows, cityRows] = await Promise.all([
         db.selectAll("profiles", session),
         db.selectAll("folders", session),
         db.selectAll("summaries", session),
@@ -184,6 +239,8 @@ class Store {
         db.selectAll("questions", session),
         db.selectAll("question_attempts", session),
         db.selectAll("daily_log", session),
+        db.selectAll("checklists", session),
+        db.selectAll("city_buildings", session),
       ]);
 
       const profileRow = profileRows[0] || null;
@@ -191,6 +248,14 @@ class Store {
       dailyRows.forEach((r) => {
         dailyLog[r.day] = { total: r.total, correct: r.correct, minutes: r.minutes };
       });
+      const checklists = { day: {}, week: {}, month: {} };
+      checklistRows.forEach((r) => {
+        if (!checklists[r.period]) checklists[r.period] = {};
+        checklists[r.period][r.period_key] = r.items || [];
+      });
+      const city = cityRows
+        .map((r) => ({ id: r.id, kind: r.kind, minutes: r.minutes, builtAt: r.built_at }))
+        .sort((a, b) => (a.builtAt || "").localeCompare(b.builtAt || ""));
 
       this.state = {
         onboarded: profileRow?.onboarded || false,
@@ -208,6 +273,8 @@ class Store {
         questionAttempts: attemptRows.map(mapAttempt.fromDb),
         dailyGoal: profileRow?.daily_goal ?? 10,
         dailyLog,
+        checklists,
+        city,
         ui: emptyState().ui,
       };
       this.hydrated = true;
@@ -215,8 +282,10 @@ class Store {
     } catch (err) {
       const cached = this.loadLocalCache();
       if (cached) {
-        this.state = cached;
-        showToast("Sem conexão com o banco — mostrando a última cópia salva neste navegador.", "alertCircle");
+        // Mescla com o estado vazio padrão pra cobrir campos novos (ex.: checklists,
+        // city) que uma cópia local salva antes dessas features não teria.
+        this.state = { ...emptyState(), ...cached, ui: cached.ui || emptyState().ui };
+        showToast("Sem conexão com o banco. Mostrando a última cópia salva neste navegador.", "alertCircle");
       } else {
         showToast("Sem conexão com o banco. Verifique sua internet e recarregue a página.", "alertCircle");
       }
@@ -225,8 +294,10 @@ class Store {
   }
 
   // ---- Folders ----
-  addFolder(name, parentId = null) {
-    const folder = { id: uid("f"), name, parentId };
+  // kind: "pasta" (padrão) ou "caderno" — mesma estrutura de pasta, só muda o
+  // ícone/rótulo. Usado principalmente a partir da tela de Resumos.
+  addFolder(name, parentId = null, kind = "pasta") {
+    const folder = { id: uid("f"), name, parentId, kind };
     this.state.folders.push(folder);
     this.save();
     db.insertRow("folders", mapFolder.toDb(folder, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
@@ -277,6 +348,7 @@ class Store {
       title,
       contentHtml: "",
       pageStyle: "minimal",
+      fontFamily: "padrao",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -561,6 +633,69 @@ class Store {
         return { folderId: f.id, name: f.name, path: this.folderPath(f.id), total, errorRate: total ? wrong / total : 0 };
       })
       .filter((s) => s.total > 0);
+  }
+
+  // ---- Checklists (calendário do painel + metas do dia/semana/mês) ----
+  // period: "day" | "week" | "month". key: "2026-08-09" | "2026-W32" | "2026-08".
+  // Os itens do dia de hoje (period="day") são os mesmos usados na coluna
+  // "Hoje" do painel de metas — mesma fonte de dado, dois lugares na tela.
+  weekKey(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = (d.getUTCDay() + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - dayNum + 3);
+    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const week = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+    return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+  }
+  monthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+  getChecklist(period, key) {
+    return (this.state.checklists[period] && this.state.checklists[period][key]) || [];
+  }
+  saveChecklist(period, key, items) {
+    if (!this.state.checklists[period]) this.state.checklists[period] = {};
+    this.state.checklists[period][key] = items;
+    this.save();
+    db.upsertRow("checklists", { user_id: this.userId, period, period_key: key, items }, this.session, "user_id,period,period_key").catch((err) =>
+      reportSyncError("salvar o checklist", err)
+    );
+  }
+  addChecklistItem(period, key, text) {
+    if (!text.trim()) return;
+    this.saveChecklist(period, key, [...this.getChecklist(period, key), { id: uid("ci"), text: text.trim(), status: "pending" }]);
+  }
+  // status: "pending" (ainda não marcado) | "done" (check) | "missed" (x).
+  // Clicar de novo no mesmo marcador volta pra "pending" (permite corrigir).
+  setChecklistItemStatus(period, key, itemId, status) {
+    const items = this.getChecklist(period, key).map((it) => (it.id === itemId ? { ...it, status: it.status === status ? "pending" : status } : it));
+    this.saveChecklist(period, key, items);
+  }
+  deleteChecklistItem(period, key, itemId) {
+    this.saveChecklist(
+      period,
+      key,
+      this.getChecklist(period, key).filter((it) => it.id !== itemId)
+    );
+  }
+
+  // ---- Cidade de foco (sessões tipo Forest, mas construindo casas) ----
+  addCityBuilding(minutes) {
+    const kinds = ["casa1", "casa2", "casa3", "casa4"];
+    const building = {
+      id: uid("city"),
+      kind: kinds[Math.floor(Math.random() * kinds.length)],
+      minutes,
+      builtAt: new Date().toISOString(),
+    };
+    this.state.city.push(building);
+    this.save();
+    db.insertRow(
+      "city_buildings",
+      { id: building.id, user_id: this.userId, kind: building.kind, minutes, built_at: building.builtAt },
+      this.session
+    ).catch((err) => reportSyncError("salvar a construção", err));
+    return building;
   }
 
   completeOnboarding({ modes, profile, materias }) {

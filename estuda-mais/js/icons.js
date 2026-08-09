@@ -45,6 +45,14 @@ const PATHS = {
   logOut: '<path d="M10 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H10"/><path d="M15.5 8 19.5 12 15.5 16"/><path d="M19 12H9.5"/>',
   mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4.5 7 12 12.5 19.5 7"/>',
   lock: '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  eraser: '<path d="M18.5 13.5 10 5 4 11l7 7h5.5z"/><path d="M9.5 19H20"/>',
+  undo: '<path d="M4 10h10.5a4.5 4.5 0 0 1 0 9H12"/><path d="M8.5 6 4 10l4.5 4"/>',
+  redo: '<path d="M20 10H9.5a4.5 4.5 0 0 0 0 9H12"/><path d="M15.5 6 20 10l-4.5 4"/>',
+  bell: '<path d="M6 9.5a6 6 0 0 1 12 0v4.3l1.6 2.7H4.4L6 13.8z"/><path d="M9.7 19a2.3 2.3 0 0 0 4.6 0"/>',
+  notebook: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M5 7.5h3"/><path d="M5 12h3"/><path d="M5 16.5h3"/><path d="M9 3.5v17"/>',
+  house: '<path d="M4 11.5 12 4.5l8 7"/><path d="M6 10v9.5h12V10"/><path d="M9.5 19.5v-6h5v6"/>',
+  chevronLeft: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
+  chevronRight: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {

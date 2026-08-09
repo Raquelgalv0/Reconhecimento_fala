@@ -65,8 +65,9 @@ export async function generateChecklistFromText(text, count = 8) {
 }
 
 // Gera até `count` questões de múltipla escolha a partir de um material.
-export async function generateQuestionsFromText(text, count = 3) {
-  const { questions } = await callAi("questions", { text, count });
+// style: "conceitual" (padrão) ou "clinico" (caso clínico, Modo Medicina).
+export async function generateQuestionsFromText(text, count = 3, style = "conceitual") {
+  const { questions } = await callAi("questions", { text, count, style });
   return questions;
 }
 
