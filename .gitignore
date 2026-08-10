@@ -1,0 +1,11 @@
+# Chaves e segredos locais — nunca commitar
+.env
+.env.local
+*.local
+
+# Dependências (caso algum dia se adicione um package.json)
+node_modules/
+
+# Arquivos comuns de SO/editor
+.DS_Store
+Thumbs.db
