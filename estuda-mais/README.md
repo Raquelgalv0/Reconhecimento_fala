@@ -1,4 +1,4 @@
-# Estuda+ — Resumos e Flashcards sincronizados
+# HiperNotes — Resumos e Flashcards sincronizados
 
 Protótipo (MVP) da plataforma única de estudos para **Concurso, Vestibular e
 Graduação**, com foco no recurso central discutido no planejamento: **Resumos**
