@@ -22,7 +22,7 @@ function renderLoadingScreen(message) {
   appRoot.innerHTML = `
     <div class="onboarding-overlay">
       <div class="onboarding-card" style="text-align:center;">
-        <div class="onboarding-step">Estuda+</div>
+        <div class="onboarding-step">HiperNotes</div>
         <p style="margin:0;">${message}</p>
       </div>
     </div>`;
@@ -52,7 +52,7 @@ function renderAuthScreen() {
     appRoot.innerHTML = `
       <div class="onboarding-overlay">
         <div class="onboarding-card">
-          <div class="onboarding-step">Estuda+</div>
+          <div class="onboarding-step">HiperNotes</div>
           <h1>${mode === "signin" ? "Entrar na sua conta" : "Criar sua conta"}</h1>
           <p>${mode === "signin" ? "Acesse com seu e-mail e senha." : "Leva menos de um minuto."}</p>
           <div id="auth-error-slot"></div>
@@ -149,7 +149,7 @@ function renderOnboarding() {
       <div class="onboarding-overlay">
         <div class="onboarding-card">
           <div class="onboarding-step">Etapa 1 de 2</div>
-          <h1>Bem-vinda ao Estuda+</h1>
+          <h1>Bem-vinda ao HiperNotes</h1>
           <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso, sem precisar de apps diferentes.</p>
           <div id="mode-list"></div>
           <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Continuar</button>
@@ -374,7 +374,7 @@ function renderSidebar(sidebarEl) {
   const folders = store.flattenFolders();
 
   sidebarEl.innerHTML = `
-    <div class="brand"><span class="dot">●</span> Estuda+</div>
+    <div class="brand"><span class="dot">●</span> HiperNotes</div>
     <div class="mode-badges">${(store.state.modes || []).map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`).join("")}</div>
 
     <div class="nav">
@@ -395,7 +395,10 @@ function renderSidebar(sidebarEl) {
         <div class="folder-row ${f.depth > 0 ? "sub" : ""} ${f.kind === "caderno" ? "caderno-row" : ""}" data-folder="${f.id}">
           ${f.depth > 0 ? "" : Icon(f.kind === "caderno" ? "notebook" : "folder", { size: 14, cls: "folder-icon" })}<span>${escapeHtml(f.name)}</span>
           <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
-          <button class="icon-btn" data-add-sub="${f.id}" title="Nova subpasta">${Icon("plus", { size: 12 })}</button>
+          <div class="folder-actions">
+            <button class="icon-btn" data-add-sub="${f.id}" title="Novo bloco">${Icon("plus", { size: 12 })}</button>
+            <button class="icon-btn icon-btn-danger" data-delete-folder="${f.id}" title="Apagar pasta">${Icon("trash", { size: 12 })}</button>
+          </div>
         </div>`
         )
         .join("")}
@@ -465,8 +468,29 @@ function renderSidebar(sidebarEl) {
   sidebarEl.querySelectorAll("[data-add-sub]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const name = prompt("Nome da subpasta:");
+      const name = prompt("Nome do bloco:");
       if (name && name.trim()) store.addFolder(name.trim(), btn.dataset.addSub);
+    });
+  });
+
+  sidebarEl.querySelectorAll("[data-delete-folder]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const folderId = btn.dataset.deleteFolder;
+      const descendantIds = store.descendantFolderIds(folderId);
+      const subCount = descendantIds.length - 1;
+      const summaryCount = store.state.summaries.filter((s) => descendantIds.includes(s.folderId)).length;
+      const cardCount = store.state.flashcards.filter((c) => descendantIds.includes(c.folderId)).length;
+      const questionCount = store.state.questions.filter((q) => descendantIds.includes(q.folderId)).length;
+      const parts = [];
+      if (subCount > 0) parts.push(`${subCount} bloco${subCount === 1 ? "" : "s"}`);
+      if (summaryCount > 0) parts.push(`${summaryCount} resumo${summaryCount === 1 ? "" : "s"}`);
+      if (cardCount > 0) parts.push(`${cardCount} flashcard${cardCount === 1 ? "" : "s"}`);
+      if (questionCount > 0) parts.push(`${questionCount} ${questionCount === 1 ? "questão" : "questões"}`);
+      const warning = parts.length ? ` Junto vai tudo o que está dentro dela: ${parts.join(", ")}.` : "";
+      if (!confirm(`Apagar "${store.folderPath(folderId)}"?${warning} Essa ação não pode ser desfeita.`)) return;
+      store.deleteFolder(folderId);
+      showToast("Pasta apagada.", "trash");
     });
   });
 
@@ -507,7 +531,7 @@ function openProfileModal() {
         <button type="button" class="btn btn-ghost btn-sm" id="import-data-btn">${Icon("upload", { size: 13 })}<span>Importar</span></button>
         <input type="file" id="import-data-file" accept="application/json" style="display:none" />
       </div>
-      <div class="field-hint">Seus dados ficam só neste navegador. Exporte de vez em quando para não perder nada.</div>
+      <div class="field-hint">Seus dados já ficam salvos na sua conta (sincronizados automaticamente). Esse backup é só uma cópia extra, útil pra guardar num arquivo seu.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>
@@ -533,7 +557,7 @@ function openProfileModal() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `estuda-mais-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          a.download = `hipernotes-backup-${new Date().toISOString().slice(0, 10)}.json`;
           a.click();
           URL.revokeObjectURL(url);
           showToast("Backup exportado.");

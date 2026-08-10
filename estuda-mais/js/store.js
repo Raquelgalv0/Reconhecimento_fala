@@ -339,6 +339,27 @@ class Store {
     }
     return ids;
   }
+  // Apaga a pasta, suas subpastas e tudo que vive dentro delas (resumos,
+  // flashcards, questões e tentativas). No banco, "on delete cascade" cuida
+  // de tudo a partir da linha da pasta raiz — aqui só espelhamos isso no
+  // estado local pra tela atualizar na hora.
+  deleteFolder(folderId) {
+    const ids = new Set(this.descendantFolderIds(folderId));
+    const removedQuestionIds = new Set(this.state.questions.filter((q) => ids.has(q.folderId)).map((q) => q.id));
+    this.state.folders = this.state.folders.filter((f) => !ids.has(f.id));
+    this.state.summaries = this.state.summaries.filter((s) => !ids.has(s.folderId));
+    this.state.flashcards = this.state.flashcards.filter((c) => !ids.has(c.folderId));
+    this.state.questions = this.state.questions.filter((q) => !ids.has(q.folderId));
+    this.state.questionAttempts = this.state.questionAttempts.filter((a) => !removedQuestionIds.has(a.questionId));
+    if (ids.has(this.state.ui.activeFolderId)) this.state.ui.activeFolderId = null;
+    if (ids.has(this.state.ui.activeDeckId)) this.state.ui.activeDeckId = null;
+    if (ids.has(this.state.ui.activeQuestionFolderId)) this.state.ui.activeQuestionFolderId = null;
+    if (this.state.ui.activeSummaryId && !this.state.summaries.some((s) => s.id === this.state.ui.activeSummaryId)) {
+      this.state.ui.activeSummaryId = null;
+    }
+    this.save();
+    db.deleteRow("folders", folderId, this.session).catch((err) => reportSyncError("excluir a pasta", err));
+  }
 
   // ---- Summaries ----
   addSummary(folderId, title = "Novo resumo") {
@@ -679,12 +700,15 @@ class Store {
     );
   }
 
-  // ---- Cidade de foco (sessões tipo Forest, mas construindo casas) ----
+  // ---- Cidade de foco (cada sessão de estudo concluída ergue um prédio na
+  // cidade isométrica da tela de Foco). "kind" não influencia mais a
+  // aparência do prédio (isso hoje é calculado por posição na lista, em
+  // foco.js) — o campo só continua existindo pra bater com a coluna já
+  // criada no banco (not null).
   addCityBuilding(minutes) {
-    const kinds = ["casa1", "casa2", "casa3", "casa4"];
     const building = {
       id: uid("city"),
-      kind: kinds[Math.floor(Math.random() * kinds.length)],
+      kind: "predio",
       minutes,
       builtAt: new Date().toISOString(),
     };

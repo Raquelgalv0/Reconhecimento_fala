@@ -1,4 +1,4 @@
-// Servidor local mínimo para rodar o Estuda+ com IA real (Groq).
+// Servidor local mínimo para rodar o HiperNotes com IA real (Groq).
 //
 // Faz duas coisas:
 //   1) Serve os arquivos estáticos do app (substitui o "python3 -m http.server").
@@ -107,7 +107,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Estuda+ rodando em http://localhost:${PORT}`);
+  console.log(`HiperNotes rodando em http://localhost:${PORT}`);
   if (!GROQ_API_KEY) {
     console.log('Aviso: GROQ_API_KEY não encontrada. Crie o arquivo ".env.local" (veja ".env.local.example") para habilitar a IA real.');
   } else {

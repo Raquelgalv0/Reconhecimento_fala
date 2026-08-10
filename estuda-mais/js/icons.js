@@ -51,6 +51,7 @@ const PATHS = {
   bell: '<path d="M6 9.5a6 6 0 0 1 12 0v4.3l1.6 2.7H4.4L6 13.8z"/><path d="M9.7 19a2.3 2.3 0 0 0 4.6 0"/>',
   notebook: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M5 7.5h3"/><path d="M5 12h3"/><path d="M5 16.5h3"/><path d="M9 3.5v17"/>',
   house: '<path d="M4 11.5 12 4.5l8 7"/><path d="M6 10v9.5h12V10"/><path d="M9.5 19.5v-6h5v6"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   chevronLeft: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
   chevronRight: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
 };

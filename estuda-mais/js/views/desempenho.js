@@ -110,7 +110,6 @@ export function renderDesempenho(container) {
               ? `<div class="priority-item"><div class="num">${Icon("calendar", { size: 12 })}</div><div class="txt"><b>Melhor dia: ${formatDay(bestDay.date)}</b><span>${bestDay.correct} acertos de ${bestDay.total} atividades</span></div></div>`
               : `<p class="muted-note">Continue estudando para bater recordes.</p>`
           }
-          <div class="priority-item"><div class="num">${Icon("flame", { size: 12 })}</div><div class="txt"><b>Sua maior sequência</b><span>${best} dia${best === 1 ? "" : "s"} seguidos estudando</span></div></div>
         </div>
       </div>
     </div>

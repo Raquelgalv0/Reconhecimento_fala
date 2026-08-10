@@ -88,6 +88,7 @@ function renderList(container, activeFolderId) {
         <p class="sub">Escreva do zero, peça para a IA gerar a partir de um material e transforme trechos em flashcards com um clique.</p>
       </div>
       <div class="btn-row">
+        <button class="btn btn-ghost" id="btn-new-subfolder">${Icon("folder", { size: 14 })}<span>Novo bloco</span></button>
         <button class="btn btn-ghost" id="btn-new-caderno">${Icon("notebook", { size: 14 })}<span>Novo caderno</span></button>
         <button class="btn btn-primary" id="btn-new-summary">${Icon("plus", { size: 14 })}<span>Novo resumo</span></button>
       </div>
@@ -133,6 +134,50 @@ function renderList(container, activeFolderId) {
       showToast(`Caderno "${name.trim()}" criado.`, "notebook");
     }
   });
+  container.querySelector("#btn-new-subfolder").addEventListener("click", () => openNewSubfolderModal(activeFolderId));
+}
+
+function openNewSubfolderModal(defaultFolderId) {
+  const folders = store.flattenFolders();
+  if (folders.length === 0) {
+    showToast("Crie um assunto na barra lateral primeiro.", "alertCircle");
+    return;
+  }
+  openModal(
+    `
+    <h3>Novo bloco</h3>
+    <p class="modal-sub">Cria um bloco dentro do assunto escolhido, pra organizar melhor os resumos.</p>
+    <div class="field">
+      <label>Dentro de</label>
+      <select id="sf-parent">${folderOptionsHtml(defaultFolderId || folders[0].id)}</select>
+    </div>
+    <div class="field">
+      <label>Nome do bloco</label>
+      <input type="text" id="sf-name" placeholder="Ex.: Direito Constitucional" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="confirm">Criar bloco</button>
+    </div>`,
+    {
+      onMount: (modal) => {
+        modal.querySelector("#sf-name").focus();
+        modal.querySelector("#cancel").addEventListener("click", closeModal);
+        modal.querySelector("#confirm").addEventListener("click", () => {
+          const name = modal.querySelector("#sf-name").value.trim();
+          const parentId = modal.querySelector("#sf-parent").value;
+          if (!name) {
+            showToast("Digite um nome para o bloco.", "alertCircle");
+            return;
+          }
+          const folder = store.addFolder(name, parentId);
+          closeModal();
+          showToast(`Bloco "${name}" criado.`, "folder");
+          store.setRoute("resumos", { activeFolderId: folder.id, activeSummaryId: null });
+        });
+      },
+    }
+  );
 }
 
 function openNewSummaryModal(defaultFolderId) {
@@ -199,44 +244,69 @@ function renderEditor(container, summaryId) {
     <input type="text" id="title-input" class="title-input" data-focus-guard placeholder="Título do resumo" value="${escapeAttr(summary.title)}" />
 
     <div class="editor-toolbar">
-      <button data-cmd="bold" title="Negrito"><b>B</b></button>
-      <button data-cmd="italic" title="Itálico"><i>I</i></button>
-      <button data-cmd="formatBlock:h2" title="Título">H2</button>
-      <button data-cmd="formatBlock:h3" title="Subtítulo">H3</button>
-      <button class="toolbar-font-btn" id="font-style-btn" title="Fonte do resumo">
-        ${Icon("pencil", { size: 13 })}<span>${FONT_STYLES.find((f) => f.id === (summary.fontFamily || "padrao")).label}</span>
-      </button>
+      <div class="tb-group">
+        <button data-cmd="bold" title="Negrito"><b>B</b></button>
+        <button data-cmd="italic" title="Itálico"><i>I</i></button>
+        <button data-cmd="formatBlock:h2" title="Título">H2</button>
+        <button data-cmd="formatBlock:h3" title="Subtítulo">H3</button>
+      </div>
       <div class="sep"></div>
-      <button data-cmd="insertUnorderedList" title="Lista">${Icon("list", { size: 15 })}</button>
-      <button data-cmd="formatBlock:blockquote" title="Citação">${Icon("quote", { size: 15 })}</button>
+      <div class="tb-group">
+        <button data-cmd="insertUnorderedList" title="Lista">${Icon("list", { size: 15 })}</button>
+        <button data-cmd="formatBlock:blockquote" title="Citação">${Icon("quote", { size: 15 })}</button>
+      </div>
       <div class="sep"></div>
-      ${FONT_COLORS.map((c) => `<button data-fc="${c.hex}" class="fc-swatch" style="color:${c.hex}" title="Cor do texto: ${c.label}">A</button>`).join("")}
+      <div class="tb-group">
+        <button class="toolbar-font-btn" id="font-style-btn" title="Fonte do resumo">
+          ${Icon("pencil", { size: 13 })}<span>${FONT_STYLES.find((f) => f.id === (summary.fontFamily || "padrao")).label}</span>
+        </button>
+      </div>
       <div class="sep"></div>
-      ${HIGHLIGHT_COLORS.map((c) => `<button data-hl="${c.hex}" class="hl-swatch ${c.cls}" title="Destacar (${c.label})"></button>`).join("")}
-      <button data-hl="${HIGHLIGHT_COLORS[0].hex}" title="Destacar">${Icon("highlighter", { size: 15 })}</button>
-      <button data-hl-erase title="Apagar destaque">${Icon("eraser", { size: 15 })}</button>
+      <div class="tb-group">
+        <div class="tb-popover-wrap">
+          <button class="tb-popover-trigger" id="fc-trigger" title="Cor do texto"><b style="color:${FONT_COLORS[0].hex}">A</b></button>
+          <div class="tb-popover" id="fc-popover">
+            ${FONT_COLORS.map((c) => `<button data-fc="${c.hex}" class="fc-swatch" style="color:${c.hex}" title="Cor do texto: ${c.label}">A</button>`).join("")}
+          </div>
+        </div>
+        <div class="tb-popover-wrap">
+          <button class="tb-popover-trigger" id="hl-trigger" title="Destacar">${Icon("highlighter", { size: 15 })}</button>
+          <div class="tb-popover" id="hl-popover">
+            ${HIGHLIGHT_COLORS.map((c) => `<button data-hl="${c.hex}" class="hl-swatch ${c.cls}" title="Destacar (${c.label})"></button>`).join("")}
+            <div class="tb-popover-sep"></div>
+            <button data-hl-erase title="Apagar destaque">${Icon("eraser", { size: 15 })}</button>
+          </div>
+        </div>
+      </div>
       <div class="sep"></div>
-      <button data-cmd="undo" title="Desfazer">${Icon("undo", { size: 15 })}</button>
-      <button data-cmd="redo" title="Refazer">${Icon("redo", { size: 15 })}</button>
+      <div class="tb-group">
+        <button data-cmd="undo" title="Desfazer">${Icon("undo", { size: 15 })}</button>
+        <button data-cmd="redo" title="Refazer">${Icon("redo", { size: 15 })}</button>
+      </div>
       <div class="sep"></div>
-      <button data-cmd="link" title="Adicionar link">${Icon("link", { size: 15 })}</button>
-      <button data-cmd="image" title="Adicionar imagem da galeria">${Icon("image", { size: 15 })}</button>
+      <div class="tb-group">
+        <button data-cmd="link" title="Adicionar link">${Icon("link", { size: 15 })}</button>
+        <button data-cmd="image" title="Adicionar imagem da galeria">${Icon("image", { size: 15 })}</button>
+        <div class="tb-popover-wrap">
+          <button class="toolbar-font-btn tb-popover-trigger" id="insert-trigger" title="Inserir bloco">${Icon("plus", { size: 13 })}<span>Inserir</span></button>
+          <div class="tb-popover tb-popover--menu" id="insert-popover">
+            <button data-insert="checklist" title="Checklist">${Icon("checkSquare", { size: 15 })}<span>Checklist</span></button>
+            <button data-insert="table" title="Tabela">${Icon("table", { size: 15 })}<span>Tabela</span></button>
+            <button data-insert="code" title="Código">${Icon("code", { size: 15 })}<span>Código</span></button>
+            <button data-insert="callout" title="Caixa de destaque">${Icon("lightbulb", { size: 15 })}<span>Destaque</span></button>
+            <button data-insert="columns" title="Colunas">${Icon("columns", { size: 15 })}<span>Colunas</span></button>
+            ${
+              (summary.pageStyle || "minimal") === "medicina"
+                ? `<button data-insert="clinicalCase" title="Caso clínico">${Icon("pulse", { size: 15 })}<span>Caso clínico</span></button>`
+                : ""
+            }
+          </div>
+        </div>
+      </div>
       <button class="ai-btn" id="ai-generate">${Icon("sparkles", { size: 14 })}<span>Gerar com IA</span></button>
       <button class="ai-btn" id="ai-questions">${Icon("helpCircle", { size: 14 })}<span>Transformar em questões</span></button>
     </div>
     <input type="file" id="editor-image-input" accept="image/*" style="display:none" />
-    <div class="editor-toolbar editor-toolbar--insert">
-      <button data-insert="checklist" title="Checklist">${Icon("checkSquare", { size: 15 })}<span>Checklist</span></button>
-      <button data-insert="table" title="Tabela">${Icon("table", { size: 15 })}<span>Tabela</span></button>
-      <button data-insert="code" title="Código">${Icon("code", { size: 15 })}<span>Código</span></button>
-      <button data-insert="callout" title="Caixa de destaque">${Icon("lightbulb", { size: 15 })}<span>Destaque</span></button>
-      <button data-insert="columns" title="Colunas">${Icon("columns", { size: 15 })}<span>Colunas</span></button>
-      ${
-        (summary.pageStyle || "minimal") === "medicina"
-          ? `<button data-insert="clinicalCase" title="Caso clínico">${Icon("pulse", { size: 15 })}<span>Caso clínico</span></button>`
-          : ""
-      }
-    </div>
     <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"}" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
   `;
@@ -442,6 +512,34 @@ function renderEditor(container, summaryId) {
       editorBody.dispatchEvent(new Event("input"));
     });
   });
+
+  // --- popovers da barra de ferramentas (cor de texto, destaque, inserir) ---
+  // Em vez de deixar ~15 botões soltos sempre visíveis, cor de texto, destaque
+  // e os blocos de inserção viram um gatilho + painel. A seleção de texto
+  // continua preservada (mousedown com preventDefault no gatilho, igual aos
+  // outros botões da barra), e o painel fecha sozinho ao escolher uma opção
+  // ou ao clicar fora.
+  const popoverWraps = container.querySelectorAll(".tb-popover-wrap");
+  const closeAllPopovers = () => {
+    popoverWraps.forEach((wrap) => wrap.querySelector(".tb-popover").classList.remove("open"));
+  };
+  popoverWraps.forEach((wrap) => {
+    const trigger = wrap.querySelector(".tb-popover-trigger");
+    const popover = wrap.querySelector(".tb-popover");
+    trigger.addEventListener("mousedown", (e) => e.preventDefault());
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willOpen = !popover.classList.contains("open");
+      closeAllPopovers();
+      if (willOpen) popover.classList.add("open");
+    });
+  });
+  document.addEventListener("mousedown", (e) => {
+    if (!e.target.closest(".tb-popover-wrap")) closeAllPopovers();
+  });
+  container
+    .querySelectorAll(".tb-popover [data-fc], .tb-popover [data-hl], .tb-popover [data-hl-erase], .tb-popover [data-insert]")
+    .forEach((btn) => btn.addEventListener("click", closeAllPopovers));
 
   // --- click on checklist checkbox or an existing linked flashcard mark ---
   editorBody.addEventListener("click", (e) => {
@@ -865,7 +963,7 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
             });
           });
           closeModal();
-          showToast(`${questions.length} questão${questions.length === 1 ? "" : "ões"} criada${questions.length === 1 ? "" : "s"}! Veja na aba Questões.`, "helpCircle");
+          showToast(`${questions.length} ${questions.length === 1 ? "questão criada" : "questões criadas"}! Veja na aba Questões.`, "helpCircle");
           store.setRoute("questoes", { activeQuestionFolderId: summary.folderId || null });
         } catch (err) {
           showToast(err.message, "alertCircle");

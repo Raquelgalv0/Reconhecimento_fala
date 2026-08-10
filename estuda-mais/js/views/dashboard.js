@@ -20,6 +20,7 @@ function dayKeyStr(date) {
 // aberto agora — não precisa persistir, refaz do zero a cada abertura). ----
 let calRefDate = new Date();
 let calSelectedDay = dayKeyStr(new Date());
+let goalsTab = "day"; // "day" | "week" | "month" — qual meta aparece ao lado do calendário
 
 // -------------------------------------------------------- CHECKLIST BLOCK --
 // Bloco reutilizável: título + input pra adicionar item + lista de itens com
@@ -129,21 +130,6 @@ function formatDayLabel(key) {
   return d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
 }
 
-const PRIORITIES = {
-  concurso: [
-    { icon: "barChart", title: "Ataque o que mais cai", desc: "Priorize baralhos com mais cartas atrasadas. Geralmente são os tópicos mais cobrados em prova." },
-    { icon: "repeat", title: "Erros voltam rápido", desc: "O que você errou hoje reaparece amanhã. Não deixe a fila de revisão acumular." },
-  ],
-  vestibular: [
-    { icon: "fileText", title: "Vença o conteúdo do dia", desc: "Gere um resumo por tópico logo após a aula e crie os flashcards essenciais na hora." },
-    { icon: "map", title: "Cobertura do edital", desc: "Distribua os resumos entre as áreas (Humanas, Exatas, Biológicas) para não deixar lacunas." },
-  ],
-  graduacao: [
-    { icon: "folder", title: "Organize por disciplina", desc: "Crie uma pasta por matéria do semestre e registre resumo + flashcards logo após cada aula." },
-    { icon: "calendar", title: "Antecipe provas e trabalhos", desc: "Revisar aos poucos ao longo do semestre evita a virada de noite antes da prova." },
-  ],
-};
-
 export function renderDashboard(container) {
   const modes = store.state.modes || [];
   const profile = store.state.profile || {};
@@ -180,42 +166,25 @@ export function renderDashboard(container) {
     </div>
 
     <div class="panel">
-      <h3>${Icon("target", { size: 16 })}<span>Metas</span></h3>
-      <div class="goals-columns">
-        ${checklistBlockHtml("Hoje", "day", dayKeyStr(new Date()), { emptyText: "Nenhuma meta pra hoje ainda." })}
-        ${checklistBlockHtml("Essa semana", "week", store.weekKey(new Date()), { emptyText: "Nenhuma meta pra semana ainda." })}
-        ${checklistBlockHtml("Esse mês", "month", store.monthKey(new Date()), { emptyText: "Nenhuma meta pro mês ainda." })}
+      <div class="panel-header-row">
+        <h3>${Icon("calendar", { size: 16 })}<span>Metas e calendário</span></h3>
+        <div class="goals-tabs">
+          <button class="tab-btn ${goalsTab === "day" ? "active" : ""}" data-goals-tab="day">Dia</button>
+          <button class="tab-btn ${goalsTab === "week" ? "active" : ""}" data-goals-tab="week">Semana</button>
+          <button class="tab-btn ${goalsTab === "month" ? "active" : ""}" data-goals-tab="month">Mês</button>
+        </div>
       </div>
-    </div>
-
-    <div class="panel">
-      <h3>${Icon("calendar", { size: 16 })}<span>Calendário de estudos</span></h3>
       <div class="cal-layout">
         <div class="cal-wrap">${calendarHtml()}</div>
         <div class="cal-day-panel">
-          ${checklistBlockHtml(formatDayLabel(calSelectedDay), "day", calSelectedDay, { emptyText: "Nada planejado pra esse dia ainda." })}
+          ${
+            goalsTab === "day"
+              ? checklistBlockHtml(formatDayLabel(calSelectedDay), "day", calSelectedDay, { emptyText: "Nada planejado pra esse dia ainda." })
+              : goalsTab === "week"
+                ? checklistBlockHtml("Essa semana", "week", store.weekKey(new Date()), { emptyText: "Nenhuma meta pra semana ainda." })
+                : checklistBlockHtml("Esse mês", "month", store.monthKey(new Date()), { emptyText: "Nenhuma meta pro mês ainda." })
+          }
         </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>${Icon("target", { size: 16 })}<span>Prioridades para o seu modo de estudo</span></h3>
-      <div class="priority-list">
-        ${(modes.length ? modes : ["concurso", "vestibular", "graduacao"])
-          .map(
-            (m) => `
-          ${modes.length > 1 ? `<div class="priority-group-label">${MODE_LABEL[m]}</div>` : ""}
-          ${(PRIORITIES[m] || [])
-            .map(
-              (p) => `
-            <div class="priority-item">
-              <div class="num">${Icon(p.icon, { size: 13 })}</div>
-              <div class="txt"><b>${p.title}</b><span>${p.desc}</span></div>
-            </div>`
-            )
-            .join("")}`
-          )
-          .join("")}
       </div>
     </div>
 
@@ -258,6 +227,13 @@ export function renderDashboard(container) {
   container.querySelectorAll("[data-day]").forEach((btn) => {
     btn.addEventListener("click", () => {
       calSelectedDay = btn.dataset.day;
+      goalsTab = "day";
+      renderDashboard(container);
+    });
+  });
+  container.querySelectorAll("[data-goals-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      goalsTab = btn.dataset.goalsTab;
       renderDashboard(container);
     });
   });

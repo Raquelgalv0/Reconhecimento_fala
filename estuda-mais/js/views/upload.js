@@ -193,7 +193,11 @@ function renderForm(folders) {
       </div>
       <div class="field">
         <label>Arquivo (.txt, .md, .pdf ou .pptx), opcional</label>
-        <input type="file" id="up-file" accept=".txt,.md,.pdf,.pptx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+        <div class="dropzone" id="up-dropzone">
+          ${Icon("upload", { size: 20 })}
+          <div class="dropzone-text"><b>Arraste um arquivo aqui</b><span>ou clique para escolher</span></div>
+          <input type="file" id="up-file" accept=".txt,.md,.pdf,.pptx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+        </div>
         <div class="field-hint" id="up-file-hint">PDF e slides (.pptx) são lidos automaticamente (PDFs de imagem/escaneados não têm o texto extraído). Imagens soltas ainda não são lidas, cole o texto manualmente.</div>
       </div>
       <div class="field">
@@ -255,7 +259,7 @@ function renderResultHtml(r) {
                 (q) => `
         <div class="preview-question">
           <p>${esc(q.statement)}</p>
-          <div class="q-meta">${q.alternatives.map((a) => `<span class="q-tag ${a.id === q.correctId ? "diff-facil" : ""}">${a.id}) ${esc(a.text).slice(0, 50)}</span>`).join("")}</div>
+          <div class="q-meta">${q.alternatives.map((a) => `<span class="q-tag ${a.id === q.correctId ? "correct" : ""}">${a.id}) ${esc(a.text).slice(0, 50)}</span>`).join("")}</div>
         </div>`
               )
               .join("")}</div>`
@@ -264,7 +268,7 @@ function renderResultHtml(r) {
 
       <div class="btn-row" style="margin-top:18px; justify-content:space-between;">
         <button class="btn btn-ghost" id="discard-btn">Descartar</button>
-        <button class="btn btn-primary" id="save-all-btn">${Icon("checkPlain", { size: 14 })}<span>Salvar tudo no Estuda+</span></button>
+        <button class="btn btn-primary" id="save-all-btn">${Icon("checkPlain", { size: 14 })}<span>Salvar tudo no HiperNotes</span></button>
       </div>
     </div>
   `;
@@ -308,8 +312,10 @@ function wireForm(container) {
     }
   };
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files[0];
+  // Único ponto de entrada pra processar um arquivo escolhido, venha ele do
+  // clique no seletor nativo ou de arrastar-e-soltar na zona de upload —
+  // as duas formas caem aqui pra não duplicar a lógica de PDF/PPTX/texto.
+  const handleSelectedFile = async (file) => {
     if (!file) return;
 
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
@@ -332,6 +338,29 @@ function wireForm(container) {
     };
     reader.onerror = () => showToast("Não foi possível ler esse arquivo.", "alertCircle");
     reader.readAsText(file);
+  };
+
+  fileInput.addEventListener("change", () => handleSelectedFile(fileInput.files[0]));
+
+  // Arrastar-e-soltar: a zona toda vira alvo (o input de arquivo cobre a
+  // área inteira de forma invisível, então clicar nela já abre o seletor
+  // nativo normalmente — só precisamos tratar o "drop" para os arquivos
+  // arrastados de fora, que não passam pelo evento "change" do input).
+  const dropZone = container.querySelector("#up-dropzone");
+  ["dragenter", "dragover"].forEach((evt) => {
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "dragend"].forEach((evt) => {
+    dropZone.addEventListener(evt, () => dropZone.classList.remove("drag-over"));
+  });
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleSelectedFile(file);
   });
 
   container.querySelector("#process-btn").addEventListener("click", async () => {

@@ -3,7 +3,6 @@ import { showToast, openModal, closeModal } from "../ui-utils.js";
 import { Icon } from "../icons.js";
 import { suggestQuestionComment } from "../ai.js";
 
-const DIFF_LABEL = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 const ALT_LETTERS = ["A", "B", "C", "D", "E"];
 
 // Fila da sessão de prática atual — fora do ciclo de render para sobreviver
@@ -53,7 +52,7 @@ function renderList(container) {
     .join("");
 
   const topicStats = store.topicQuestionStats();
-  const mostAsked = [...topicStats].sort((a, b) => b.totalQuestions - a.totalQuestions).slice(0, 4);
+  const bestAccuracy = [...topicStats].filter((s) => s.totalAttempts > 0).sort((a, b) => a.errorRate - b.errorRate).slice(0, 4);
   const mostError = [...topicStats].filter((s) => s.totalAttempts > 0).sort((a, b) => b.errorRate - a.errorRate).slice(0, 4);
   const confusion = store.confusionRanking(4);
 
@@ -61,7 +60,7 @@ function renderList(container) {
     <div class="main-header">
       <div>
         <h1>Banco de Questões</h1>
-        <p class="sub">Cadastre, pratique e acompanhe onde você mais erra: por assunto, banca e dificuldade.</p>
+        <p class="sub">Cadastre, pratique e acompanhe onde você mais erra: por assunto e banca.</p>
       </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="btn-new-question">${Icon("plus", { size: 14 })}<span>Nova questão</span></button>
@@ -73,11 +72,11 @@ function renderList(container) {
       topicStats.length > 0
         ? `<div class="stat-grid stat-grid--3">
       <div class="panel">
-        <h3>${Icon("barChart", { size: 15 })}<span>Mais cobrados</span></h3>
+        <h3>${Icon("award", { size: 15 })}<span>Maior taxa de acerto</span></h3>
         <div class="priority-list">
-          ${mostAsked
-            .map((s) => `<div class="priority-item"><div class="num">${Icon("folder", { size: 12 })}</div><div class="txt"><b>${esc(s.name)}</b><span>${s.totalQuestions} questão${s.totalQuestions === 1 ? "" : "ões"}</span></div></div>`)
-            .join("") || `<p class="muted-note">Sem dados ainda.</p>`}
+          ${bestAccuracy
+            .map((s) => `<div class="priority-item"><div class="num">${Icon("folder", { size: 12 })}</div><div class="txt"><b>${esc(s.name)}</b><span>${Math.round((1 - s.errorRate) * 100)}% de acerto em ${s.totalAttempts} tentativa${s.totalAttempts === 1 ? "" : "s"}</span></div></div>`)
+            .join("") || `<p class="muted-note">Pratique para gerar estatísticas.</p>`}
         </div>
       </div>
       <div class="panel">
@@ -120,7 +119,6 @@ function renderList(container) {
             <div class="q-meta">
               ${q.institution ? `<span class="q-tag">${esc(q.institution)}</span>` : ""}
               ${q.year ? `<span class="q-tag">${q.year}</span>` : ""}
-              <span class="q-tag diff-${q.difficulty}">${DIFF_LABEL[q.difficulty]}</span>
               <span class="q-tag">${esc(store.folderPath(q.folderId))}</span>
               ${statusTag}
             </div>
@@ -180,7 +178,7 @@ function openQuestionModal(questionId) {
   openModal(
     `
     <h3>${editing ? "Editar questão" : "Nova questão"}</h3>
-    <p class="modal-sub">Organize por assunto, banca, ano e dificuldade, igual ao seu caderno de questões.</p>
+    <p class="modal-sub">Organize por assunto, banca e ano, igual ao seu caderno de questões.</p>
     <div class="field">
       <label>Enunciado</label>
       <textarea id="q-statement" style="min-height:80px">${editing ? esc(editing.statement) : ""}</textarea>
@@ -195,16 +193,9 @@ function openQuestionModal(questionId) {
       <div class="field"><label>Assunto</label><select id="q-folder">${folderOptionsHtml(editing ? editing.folderId : folders[0].id)}</select></div>
       <div class="field"><label>Banca</label><input type="text" id="q-institution" placeholder="Ex.: CESPE" value="${editing ? esc(editing.institution) : ""}" /></div>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Ano</label><input type="text" inputmode="numeric" id="q-year" placeholder="2024" value="${editing && editing.year ? editing.year : ""}" /></div>
-      <div class="field">
-        <label>Dificuldade</label>
-        <select id="q-difficulty">
-          <option value="facil" ${editing?.difficulty === "facil" ? "selected" : ""}>Fácil</option>
-          <option value="medio" ${!editing || editing?.difficulty === "medio" ? "selected" : ""}>Médio</option>
-          <option value="dificil" ${editing?.difficulty === "dificil" ? "selected" : ""}>Difícil</option>
-        </select>
-      </div>
+    <div class="field">
+      <label>Ano</label>
+      <input type="text" inputmode="numeric" id="q-year" placeholder="2024" value="${editing && editing.year ? editing.year : ""}" />
     </div>
     <div class="field">
       <label>Comentário (opcional)</label>
@@ -309,7 +300,6 @@ function openQuestionModal(questionId) {
           const folderId = modal.querySelector("#q-folder").value;
           const institution = modal.querySelector("#q-institution").value.trim();
           const year = Number(modal.querySelector("#q-year").value) || null;
-          const difficulty = modal.querySelector("#q-difficulty").value;
           const comment = modal.querySelector("#q-comment").value.trim();
           const correctId = modal.querySelector("#q-correct").value;
 
@@ -317,7 +307,7 @@ function openQuestionModal(questionId) {
             showToast("Preencha o enunciado e todas as alternativas.", "alertCircle");
             return;
           }
-          const data = { statement, alternatives: alts, correctId, folderId, institution, year, difficulty, comment: comment || null };
+          const data = { statement, alternatives: alts, correctId, folderId, institution, year, comment: comment || null };
           if (editing) {
             store.updateQuestion(questionId, data);
             showToast("Questão atualizada.");
@@ -382,7 +372,6 @@ function renderPractice(container) {
         <div class="q-meta" style="margin-bottom:14px;">
           ${q.institution ? `<span class="q-tag">${esc(q.institution)}</span>` : ""}
           ${q.year ? `<span class="q-tag">${q.year}</span>` : ""}
-          <span class="q-tag diff-${q.difficulty}">${DIFF_LABEL[q.difficulty]}</span>
         </div>
         <p class="practice-statement">${esc(q.statement)}</p>
         <div class="practice-alts">

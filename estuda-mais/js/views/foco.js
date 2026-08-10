@@ -1,19 +1,13 @@
-// Sessão de foco estilo Forest: escolhe tempo de estudo e de pausa, e cada
-// sessão de estudo concluída sem cancelar constrói uma casa. As casas vão se
-// acumulando numa cidade (em vez da floresta do Forest).
+// Sessão de foco estilo SimCity: escolhe tempo de estudo e de pausa, e cada
+// sessão de estudo concluída ergue um prédio na sua cidade isométrica — vista
+// de cima, em bloco, tipo painel de simulador de cidade (população, minutos
+// focados, nível), em vez de uma cena fofa com mascote.
 import { store } from "../store.js";
 import { showToast, playChime } from "../ui-utils.js";
 import { Icon } from "../icons.js";
 
 const STUDY_PRESETS = [15, 25, 50];
 const BREAK_PRESETS = [5, 10, 15];
-
-const HOUSE_COLORS = {
-  casa1: { wall: "#e8ceb0", roof: "#b3543e" },
-  casa2: { wall: "#d7cdec", roof: "#5b3f82" },
-  casa3: { wall: "#c9e3d3", roof: "#2f9e6b" },
-  casa4: { wall: "#f3d9c9", roof: "#c98a3c" },
-};
 
 // Níveis da cidade — puramente cosmético, dá o "senso de progresso" tipo jogo.
 const CITY_LEVELS = [
@@ -38,8 +32,8 @@ function cityLevelInfo(count) {
   return { current, next, progress };
 }
 
-// Dias seguidos (incluindo hoje) com pelo menos 1 casa construída — igual
-// espírito do streak de flashcard, mas calculado direto do array de casas,
+// Dias seguidos (incluindo hoje) com pelo menos 1 prédio construído — igual
+// espírito do streak de flashcard, mas calculado direto do array de prédios,
 // sem precisar guardar nada a mais.
 function focusStreakDays(city) {
   const daysWithBuild = new Set(city.map((b) => new Date(b.builtAt).toISOString().slice(0, 10)));
@@ -68,7 +62,7 @@ function loadFocoState() {
   } catch {
     // ignora
   }
-  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, endsAt: null };
+  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, endsAt: null, spotifyUrl: null };
 }
 function saveFocoState() {
   try {
@@ -96,24 +90,20 @@ function formatMMSS(ms) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function houseSvg(kind) {
-  const c = HOUSE_COLORS[kind] || HOUSE_COLORS.casa1;
-  return `<svg viewBox="0 0 40 40" width="36" height="36">
-    <path d="M4 20 20 8 36 20" fill="none" stroke="${c.roof}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
-    <rect x="8" y="19" width="24" height="15" rx="1.5" fill="${c.wall}"/>
-    <rect x="17" y="24" width="6" height="10" fill="${c.roof}" opacity="0.6"/>
-  </svg>`;
-}
+// ---- Blocos isométricos (o "look" de simulador de cidade) ----
+// Cada prédio é desenhado como um bloco falso-3D (topo + duas paredes) via
+// polígonos SVG planos — sem transform 3D, então renderiza igual em qualquer
+// navegador. Quanto mais avançada a cidade, mais alto o prédio.
+const ISO_TILE_W = 46;
+const ISO_HH = 12; // metade da altura do losango do topo
 
-// ---- Cena de construção ao vivo (aparece durante a fase de estudo) ----
-// Quanto mais casas a cidade já tem, mais "avançado" o prédio que está sendo
-// erguido agora — dá um senso real de evolução, não só repete a casinha.
-const BUILDING_TIERS = [
-  { path: "M18,92 V60 L45,36 L72,60 V92 Z", color: "#c98a3c", windows: [[30, 70, 8, 8], [52, 70, 8, 8]] },
-  { path: "M10,92 V48 L45,20 L80,48 V92 Z", color: "#5b3f82", windows: [[26, 60, 9, 9], [55, 60, 9, 9], [26, 76, 9, 9], [55, 76, 9, 9]] },
-  { path: "M14,92 V38 L45,22 L76,38 V92 Z", color: "#2f9e6b", windows: [[22, 50, 8, 8], [42, 50, 8, 8], [62, 50, 8, 8], [22, 66, 8, 8], [42, 66, 8, 8], [62, 66, 8, 8]] },
-  { path: "M38,92 V12 H82 V92 Z", color: "#4d6fa3", windows: [[45, 22, 8, 8], [64, 22, 8, 8], [45, 38, 8, 8], [64, 38, 8, 8], [45, 54, 8, 8], [64, 54, 8, 8], [45, 70, 8, 8], [64, 70, 8, 8]] },
+const ISO_TIERS = [
+  { top: "#f0d2a8", left: "#d9a35e", right: "#b3733a", bh: 16 },
+  { top: "#d9cdf0", left: "#9c85d1", right: "#5b3f82", bh: 24 },
+  { top: "#c9ecd6", left: "#7fd19c", right: "#2f9e6b", bh: 34 },
+  { top: "#cfe0f5", left: "#86a9d6", right: "#4d6fa3", bh: 48 },
 ];
+
 function buildingTierIndex(count) {
   if (count >= 30) return 3;
   if (count >= 15) return 2;
@@ -121,20 +111,96 @@ function buildingTierIndex(count) {
   return 0;
 }
 
-function mascotSvg(celebrate) {
-  return `<g class="cs-mascot ${celebrate ? "celebrate" : "working"}" transform="translate(90,72)">
-    <ellipse cx="0" cy="0" rx="11" ry="10" fill="#7f77dd"/>
-    <circle cx="-4" cy="-3" r="1.8" fill="#26215c"/>
-    <circle cx="4" cy="-3" r="1.8" fill="#26215c"/>
-    <path d="M-5,3 Q0,7 5,3" stroke="#26215c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-    <rect x="-9" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
-    <rect x="3" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
-    <g class="cs-mascot-arm">
-      <rect x="9" y="-6" width="10" height="4" rx="2" fill="#7f77dd"/>
-      <rect x="15" y="-12" width="4" height="10" rx="1.5" fill="#8a6a4f" transform="rotate(30 17 -7)"/>
-    </g>
-  </g>`;
+function isoBuildingSvg(tierIdx, scale = 1) {
+  const t = ISO_TIERS[tierIdx] || ISO_TIERS[0];
+  const w = ISO_TILE_W;
+  const hh = ISO_HH;
+  const bh = t.bh;
+  const vh = 2 * hh + bh;
+  const edge = 'stroke="rgba(34,28,44,0.18)" stroke-width="0.6"';
+  const leftFace = `0,${hh} ${w / 2},${2 * hh} ${w / 2},${2 * hh + bh} 0,${hh + bh}`;
+  const rightFace = `${w / 2},${2 * hh} ${w},${hh} ${w},${hh + bh} ${w / 2},${2 * hh + bh}`;
+  const topFace = `${w / 2},0 ${w},${hh} ${w / 2},${2 * hh} 0,${hh}`;
+
+  let windows = "";
+  if (tierIdx >= 1) {
+    const n = tierIdx;
+    const step = bh / (n + 1);
+    for (let k = 1; k <= n; k++) {
+      const wy = (hh + step * k - 2.5).toFixed(1);
+      windows += `<rect x="${w / 2 + 6}" y="${wy}" width="5" height="5" rx="1" fill="#fbe8b8" opacity="0.85"/>`;
+    }
+  }
+  if (tierIdx >= 2) {
+    const wy = (hh + bh / 2 - 2.5).toFixed(1);
+    windows += `<rect x="6" y="${wy}" width="5" height="5" rx="1" fill="#fbe8b8" opacity="0.7"/>`;
+  }
+
+  const svg = `<svg viewBox="0 0 ${w} ${vh}" width="${(w * scale).toFixed(1)}" height="${(vh * scale).toFixed(1)}">
+    <polygon points="${leftFace}" fill="${t.left}" ${edge}/>
+    <polygon points="${rightFace}" fill="${t.right}" ${edge}/>
+    <polygon points="${topFace}" fill="${t.top}" ${edge}/>
+    ${windows}
+  </svg>`;
+  return { svg, w, vh, bh };
 }
+
+// Grade isométrica: coloca cada prédio numa posição "diamante" (col/linha)
+// pra imitar a câmera de topo/diagonal clássica dos sim-city. baseX generoso
+// evita que a matemática (col-row) dê posição negativa nas linhas de trás.
+const GRID_COLS = 6;
+const GRID_BASE_X = 300;
+const GRID_MAX_DISPLAY = 72;
+const GRID_OFFSET_Y = 72; // = vh do prédio mais alto (tier 3), garante top >= 0
+
+function isoTilePos(index) {
+  const row = Math.floor(index / GRID_COLS);
+  const col = index % GRID_COLS;
+  return {
+    x: GRID_BASE_X + (col - row) * (ISO_TILE_W / 2),
+    y: (col + row) * ISO_HH,
+  };
+}
+
+function cityIsoGridHtml(city) {
+  if (city.length === 0) {
+    return `<div class="empty-state" style="padding:26px 10px;"><div class="big">${Icon("landmark", { size: 26 })}</div>Sua cidade está vazia. Complete uma sessão de foco pra erguer o primeiro prédio.</div>`;
+  }
+  const hidden = Math.max(0, city.length - GRID_MAX_DISPLAY);
+  const visible = city.slice(hidden);
+  let maxY = 0;
+  const tiles = visible
+    .map((b, vi) => {
+      const originalIndex = hidden + vi;
+      const tierIdx = buildingTierIndex(originalIndex);
+      const { svg, w, vh } = isoBuildingSvg(tierIdx);
+      const { x, y } = isoTilePos(vi);
+      maxY = Math.max(maxY, y);
+      const left = (x - w / 2).toFixed(1);
+      const top = (GRID_OFFSET_Y + y - vh).toFixed(1);
+      const dateLabel = new Date(b.builtAt).toLocaleDateString("pt-BR");
+      return `<div class="city-iso-tile" style="left:${left}px;top:${top}px;animation-delay:${Math.min(vi, 24) * 0.025}s" title="${dateLabel} · ${b.minutes} min">${svg}</div>`;
+    })
+    .join("");
+  const containerHeight = Math.round(GRID_OFFSET_Y + maxY + 20);
+  const note =
+    hidden > 0
+      ? `<div class="city-grid-note">+${hidden} prédio${hidden === 1 ? "" : "s"} mais antigo${hidden === 1 ? "" : "s"} fora de vista</div>`
+      : "";
+  return `<div class="city-iso-grid" style="height:${containerHeight}px;">${tiles}</div>${note}`;
+}
+
+// ---- Cena de construção ao vivo (aparece durante a fase de estudo) ----
+// Elevação frontal (não isométrica) do mesmo prédio que vai entrar na
+// cidade — sobe do chão conforme o tempo passa, num fundo estilo planta
+// baixa/blueprint. As cores batem com os blocos isométricos (mesmo tom da
+// parede "right" de cada tier), pra cidade e canteiro de obras conversarem.
+const BUILDING_TIERS = [
+  { path: "M18,92 V60 L45,36 L72,60 V92 Z", color: ISO_TIERS[0].right, windows: [[30, 70, 8, 8], [52, 70, 8, 8]] },
+  { path: "M10,92 V48 L45,20 L80,48 V92 Z", color: ISO_TIERS[1].right, windows: [[26, 60, 9, 9], [55, 60, 9, 9], [26, 76, 9, 9], [55, 76, 9, 9]] },
+  { path: "M14,92 V38 L45,22 L76,38 V92 Z", color: ISO_TIERS[2].right, windows: [[22, 50, 8, 8], [42, 50, 8, 8], [62, 50, 8, 8], [22, 66, 8, 8], [42, 66, 8, 8], [62, 66, 8, 8]] },
+  { path: "M38,92 V12 H82 V92 Z", color: ISO_TIERS[3].right, windows: [[45, 22, 8, 8], [64, 22, 8, 8], [45, 38, 8, 8], [64, 38, 8, 8], [45, 54, 8, 8], [64, 54, 8, 8], [45, 70, 8, 8], [64, 70, 8, 8]] },
+];
 
 function constructionSceneHtml(count) {
   const tier = BUILDING_TIERS[buildingTierIndex(count)];
@@ -148,9 +214,113 @@ function constructionSceneHtml(count) {
           <path class="cs-fill" d="${tier.path}" fill="${tier.color}"></path>
           ${tier.windows.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="#fbe8b8" opacity="0.85"></rect>`).join("")}
         </g>
-        ${mascotSvg(false)}
       </svg>
     </div>`;
+}
+
+// ---- Playlist de foco (Spotify incorporado) ----
+// Aceita link de compartilhamento (open.spotify.com/playlist/... ou com
+// prefixo de idioma open.spotify.com/intl-pt/playlist/...) ou URI
+// (spotify:playlist:...), de playlist, álbum, faixa ou artista. Não precisa
+// de login nem de chave de API — é só o player incorporado público do
+// Spotify (toca prévia de 30s pra quem não é Premium/não está logado no
+// navegador, e a faixa completa pra quem está).
+function parseSpotifyRef(raw) {
+  const input = (raw || "").trim();
+  if (!input) return null;
+  let match = input.match(/spotify\.com\/(?:intl-[a-z]{2}\/)?(?:embed\/)?(playlist|album|track|artist)\/([a-zA-Z0-9]+)/i);
+  if (!match) match = input.match(/^spotify:(playlist|album|track|artist):([a-zA-Z0-9]+)$/i);
+  if (!match) return null;
+  const [, type, id] = match;
+  return { type: type.toLowerCase(), id };
+}
+function spotifyEmbedSrc(ref) {
+  return `https://open.spotify.com/embed/${ref.type}/${ref.id}?utm_source=generator&theme=0`;
+}
+function spotifyOpenUrl(ref) {
+  return `https://open.spotify.com/${ref.type}/${ref.id}`;
+}
+
+function spotifyBlockHtml(state) {
+  if (!state.spotifyUrl) {
+    return `
+      <div class="spotify-block spotify-block--empty">
+        <button class="btn btn-ghost btn-sm" id="spotify-add">${Icon("music", { size: 13 })}<span>Conectar playlist do Spotify</span></button>
+      </div>`;
+  }
+  // Além do player incorporado, sempre mostra um link direto pra playlist
+  // específica no Spotify — se o player embutido não tocar direito no
+  // navegador (ex.: cookie de terceiro bloqueado), esse link garante que a
+  // pessoa chega na playlist certa, não numa página genérica do Spotify.
+  const ref = parseSpotifyRef(state.spotifyUrl);
+  const openUrl = ref ? spotifyOpenUrl(ref) : null;
+  return `
+    <div class="spotify-block">
+      <div class="spotify-embed-slot" id="spotify-slot"></div>
+      <div class="spotify-block-actions">
+        ${openUrl ? `<a class="spotify-open-link" href="${openUrl}" target="_blank" rel="noopener">${Icon("link", { size: 11 })}<span>Abrir no Spotify</span></a>` : ""}
+        <button class="icon-btn-ghost" id="spotify-change" title="Trocar playlist">${Icon("pencil", { size: 12 })}</button>
+        <button class="icon-btn-ghost" id="spotify-remove" title="Remover playlist">${Icon("x", { size: 12 })}</button>
+      </div>
+    </div>`;
+}
+
+// O iframe fica guardado num módulo à parte e é REAPROVEITADO (reparentado,
+// não recriado) a cada render — se recriássemos o elemento toda vez que a
+// tela re-renderiza (o que acontece a cada troca de fase, por exemplo), a
+// música reiniciaria do zero sempre. Só cria um iframe novo de verdade
+// quando o link muda.
+let spotifyFrameEl = null;
+let spotifyFrameSrc = null;
+
+function mountSpotifyFrame(container, state) {
+  const slot = container.querySelector("#spotify-slot");
+  if (!slot) return;
+  const ref = parseSpotifyRef(state.spotifyUrl);
+  if (!ref) return;
+  const src = spotifyEmbedSrc(ref);
+  if (!spotifyFrameEl || spotifyFrameSrc !== src) {
+    spotifyFrameEl = document.createElement("iframe");
+    spotifyFrameEl.src = src;
+    spotifyFrameEl.width = "100%";
+    spotifyFrameEl.height = "152";
+    spotifyFrameEl.style.borderRadius = "12px";
+    spotifyFrameEl.frameBorder = "0";
+    spotifyFrameEl.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+    spotifyFrameEl.loading = "lazy";
+    spotifyFrameSrc = src;
+  }
+  slot.appendChild(spotifyFrameEl); // reparenta o mesmo elemento — não recarrega o player
+}
+
+function wireSpotifyControls(container, state) {
+  const addBtn = container.querySelector("#spotify-add");
+  const changeBtn = container.querySelector("#spotify-change");
+  const removeBtn = container.querySelector("#spotify-remove");
+
+  const promptAndSave = (defaultValue) => {
+    const url = prompt("Cole o link de uma playlist, álbum ou faixa do Spotify (botão \"Compartilhar\" no Spotify):", defaultValue || "");
+    if (!url || !url.trim()) return;
+    if (!parseSpotifyRef(url)) {
+      showToast("Não reconheci esse link do Spotify. Copie o link de compartilhamento de uma playlist, álbum ou faixa.", "alertCircle");
+      return;
+    }
+    state.spotifyUrl = url.trim();
+    saveFocoState();
+    renderFoco(container);
+  };
+
+  if (addBtn) addBtn.addEventListener("click", () => promptAndSave());
+  if (changeBtn) changeBtn.addEventListener("click", () => promptAndSave(state.spotifyUrl));
+  if (removeBtn) {
+    removeBtn.addEventListener("click", () => {
+      state.spotifyUrl = null;
+      spotifyFrameEl = null;
+      spotifyFrameSrc = null;
+      saveFocoState();
+      renderFoco(container);
+    });
+  }
 }
 
 export function renderFoco(container) {
@@ -164,12 +334,13 @@ export function renderFoco(container) {
     <div class="main-header">
       <div>
         <h1>Foco</h1>
-        <p class="sub">Estude sem distração. Cada sessão concluída constrói uma casa na sua cidade.</p>
+        <p class="sub">Estude sem distração. Cada sessão concluída ergue um prédio na sua cidade.</p>
       </div>
       ${streak > 0 ? `<div class="focus-streak-badge">${Icon("flame", { size: 15 })}<span>${streak} dia${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</span></div>` : ""}
     </div>
     <div class="focus-layout">
       <div class="panel focus-timer-card">
+        ${spotifyBlockHtml(state)}
         ${focusStageHtml(state)}
       </div>
       <div class="panel focus-city-card">
@@ -177,32 +348,25 @@ export function renderFoco(container) {
           <h3>${Icon("landmark", { size: 16 })}<span>Sua cidade</span></h3>
           <span class="city-level-badge">${Icon(current.icon, { size: 12 })}${current.label}</span>
         </div>
-        <div class="city-stats">${city.length} casa${city.length === 1 ? "" : "s"} construída${city.length === 1 ? "" : "s"} · ${totalMinutes} min focados</div>
+        <div class="city-hud-bar">
+          <div class="hud-stat">${Icon("house", { size: 13 })}<span>${city.length}</span><small>prédios</small></div>
+          <div class="hud-stat">${Icon("clock", { size: 13 })}<span>${totalMinutes}</span><small>min focados</small></div>
+          <div class="hud-stat">${Icon("trendingUp", { size: 13 })}<span>${progress}%</span><small>${next ? "próx. nível" : "nível máx."}</small></div>
+        </div>
         ${
           next
-            ? `<div class="city-level-progress"><div class="city-level-bar" style="width:${progress}%"></div></div>
-               <div class="city-level-hint">${next.min - city.length} casa${next.min - city.length === 1 ? "" : "s"} pra virar "${next.label}"</div>`
+            ? `<div class="city-level-hint">${next.min - city.length} prédio${next.min - city.length === 1 ? "" : "s"} pra virar "${next.label}"</div>`
             : `<div class="city-level-hint">Nível máximo da cidade — você é imparável.</div>`
         }
         <div class="city-scene">
-          <div class="city-sky"><span class="city-sun"></span><span class="city-cloud c1"></span><span class="city-cloud c2"></span></div>
-          <div class="city-grid">
-            ${
-              city.length === 0
-                ? `<div class="empty-state" style="padding:20px 10px;"><div class="big">${Icon("landmark", { size: 26 })}</div>Sua cidade está vazia. Complete uma sessão de foco pra construir a primeira casa.</div>`
-                : city
-                    .map(
-                      (b, i) =>
-                        `<div class="city-house" style="animation-delay:${Math.min(i, 20) * 0.03}s" title="${new Date(b.builtAt).toLocaleDateString("pt-BR")} · ${b.minutes} min">${houseSvg(b.kind)}</div>`
-                    )
-                    .join("")
-            }
-          </div>
+          ${cityIsoGridHtml(city)}
         </div>
       </div>
     </div>
   `;
 
+  mountSpotifyFrame(container, state);
+  wireSpotifyControls(container, state);
   wireStage(container, state);
 }
 
@@ -232,7 +396,7 @@ function focusStageHtml(state) {
     const cityCount = (store.state.city || []).length;
     return `
       <div class="focus-running">
-        <div class="focus-phase-label">Construindo...</div>
+        <div class="focus-phase-label">Erguendo prédio...</div>
         <div class="focus-countdown focus-countdown--sm" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
         ${constructionSceneHtml(cityCount)}
         <div class="focus-progress-track"><div class="focus-progress-fill" id="foco-progress-fill"></div></div>
@@ -244,7 +408,7 @@ function focusStageHtml(state) {
     const totalMs = state.breakMinutes * 60000;
     return `
       <div class="focus-running">
-        <div class="focus-phase-label is-break">Pausa · sua equipe descansa</div>
+        <div class="focus-phase-label is-break">Pausa · obra parada</div>
         <div class="focus-ring-wrap is-break">
           <svg class="focus-ring" viewBox="0 0 120 120">
             <circle class="focus-ring-bg" cx="60" cy="60" r="52"></circle>
@@ -252,30 +416,19 @@ function focusStageHtml(state) {
           </svg>
           <div class="focus-countdown" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
         </div>
-        <svg class="focus-resting-mascot" viewBox="0 0 40 20" width="70" height="34"><g transform="translate(20,12)"><ellipse cx="0" cy="0" rx="11" ry="8" fill="#7f77dd"/><path d="M-4,-4 h3 M-1,-7 v3" stroke="#26215c" stroke-width="1.2" stroke-linecap="round"/><text x="9" y="-6" font-size="8" fill="#5b3f82">zz</text></g></svg>
         <button class="btn btn-ghost" id="focus-skip-break">${Icon("checkPlain", { size: 14 })}<span>Pular pausa</span></button>
       </div>`;
   }
 
   // study-done
-  const tier = BUILDING_TIERS[buildingTierIndex(Math.max(0, (store.state.city || []).length - 1))];
+  const { svg } = isoBuildingSvg(buildingTierIndex(Math.max(0, (store.state.city || []).length - 1)), 1.8);
   return `
     <div class="focus-done">
       <div class="focus-done-house">
         <div class="confetti">${Array.from({ length: 10 }, (_, i) => `<span class="confetti-piece c${i % 5}"></span>`).join("")}</div>
-        <svg viewBox="0 0 120 100" width="100" height="84">
-          <path d="${tier.path}" fill="${tier.color}"></path>
-          <g class="cs-mascot celebrate" transform="translate(90,72)">
-            <ellipse cx="0" cy="0" rx="11" ry="10" fill="#7f77dd"/>
-            <circle cx="-4" cy="-3" r="1.8" fill="#26215c"/>
-            <circle cx="4" cy="-3" r="1.8" fill="#26215c"/>
-            <path d="M-5,2 Q0,8 5,2" stroke="#26215c" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-            <rect x="-9" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
-            <rect x="3" y="8" width="6" height="4" rx="2" fill="#7f77dd"/>
-          </g>
-        </svg>
+        ${svg}
       </div>
-      <h3>Casa construída!</h3>
+      <h3>Prédio erguido!</h3>
       <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. Quer fazer uma pausa de ${state.breakMinutes} min?</p>
       <div class="btn-row" style="justify-content:center;">
         <button class="btn btn-ghost" id="focus-skip-break">Pular pausa</button>
@@ -321,7 +474,7 @@ function wireStage(container, state) {
 
   if (state.phase === "study") {
     container.querySelector("#focus-cancel").addEventListener("click", () => {
-      if (!confirm("Se cancelar agora, a casa não vai ser construída. Cancelar mesmo assim?")) return;
+      if (!confirm("Se cancelar agora, o prédio não vai ser erguido. Cancelar mesmo assim?")) return;
       state.phase = "idle";
       state.endsAt = null;
       saveFocoState();
@@ -406,7 +559,7 @@ function startTick(container, state) {
         if (levelAfter !== levelBefore) {
           showToast(`Sua cidade agora é uma "${levelAfter}"!`, "landmark");
         } else {
-          showToast("Casa construída! Hora da pausa.", "checkPlain");
+          showToast("Prédio erguido! Hora da pausa.", "checkPlain");
         }
       } else if (state.phase === "break") {
         state.phase = "idle";
