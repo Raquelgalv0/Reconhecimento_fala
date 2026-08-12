@@ -399,9 +399,11 @@ function renderSidebar(sidebarEl) {
           (f) => `
         <div class="folder-row ${f.depth > 0 ? "sub" : ""} ${f.kind === "caderno" ? "caderno-row" : ""}" data-folder="${f.id}">
           ${f.depth > 0 ? "" : Icon(f.kind === "caderno" ? "notebook" : "folder", { size: 14, cls: "folder-icon" })}<span>${escapeHtml(f.name)}</span>
+          ${f.depth === 0 && f.mode ? `<span class="folder-mode-tag">${MODE_TAG[f.mode] || f.mode}</span>` : ""}
           <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
           <div class="folder-actions">
             <button class="icon-btn" data-add-sub="${f.id}" title="Novo bloco">${Icon("plus", { size: 12 })}</button>
+            ${f.depth === 0 ? `<button class="icon-btn" data-move-folder="${f.id}" title="Migrar para outra Ala">${Icon("map", { size: 12 })}</button>` : ""}
             <button class="icon-btn icon-btn-danger" data-delete-folder="${f.id}" title="Apagar pasta">${Icon("trash", { size: 12 })}</button>
           </div>
         </div>`
@@ -475,6 +477,13 @@ function renderSidebar(sidebarEl) {
       e.stopPropagation();
       const name = prompt("Nome do bloco:");
       if (name && name.trim()) store.addFolder(name.trim(), btn.dataset.addSub);
+    });
+  });
+
+  sidebarEl.querySelectorAll("[data-move-folder]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openMoveFolderModal(btn.dataset.moveFolder);
     });
   });
 
@@ -599,6 +608,35 @@ function openProfileModal() {
           });
           closeModal();
           showToast("Perfil atualizado.");
+        });
+      },
+    }
+  );
+}
+
+// Migra uma pasta de assunto (e tudo dentro dela) de uma Ala pra outra —
+// ex.: uma pasta de Graduação virar uma pasta da Ala de Medicina. Só marca
+// uma "etiqueta" de modo na pasta raiz; o conteúdo em si não muda de lugar.
+function openMoveFolderModal(folderId) {
+  const folder = store.state.folders.find((f) => f.id === folderId);
+  if (!folder) return;
+  openModal(
+    `
+    <h3>${Icon("map", { size: 16 })} Migrar "${escapeHtml(folder.name)}" para outra Ala</h3>
+    <p class="modal-sub">Move toda essa pasta (e tudo dentro dela) para outro modo de estudo.</p>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      <button type="button" class="btn btn-sm ${!folder.mode ? "btn-primary" : "btn-ghost"}" data-mode="">Nenhuma Ala específica</button>
+      ${MODES.map((m) => `<button type="button" class="btn btn-sm ${folder.mode === m.id ? "btn-primary" : "btn-ghost"}" data-mode="${m.id}">${Icon(m.icon, { size: 13 })}<span>${m.title}</span></button>`).join("")}
+    </div>`,
+    {
+      onMount: (modal) => {
+        modal.querySelectorAll("[data-mode]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const mode = btn.dataset.mode || null;
+            store.updateFolder(folderId, { mode });
+            closeModal();
+            showToast(mode ? `Pasta migrada para a Ala de ${MODE_TAG[mode]}.` : "Pasta sem Ala específica agora.", "map");
+          });
         });
       },
     }

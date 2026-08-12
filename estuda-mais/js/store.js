@@ -41,8 +41,8 @@ function emptyState() {
 // (snake_case). Mantém store.js como a única peça que sabe desse mapeamento
 // — o resto do app continua lendo store.state exatamente como antes. ----
 const mapFolder = {
-  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId, kind: f.kind || "pasta" }),
-  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id, kind: r.kind || "pasta" }),
+  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId, kind: f.kind || "pasta", mode: f.mode || null }),
+  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id, kind: r.kind || "pasta", mode: r.mode || null }),
 };
 const mapSummary = {
   toDb: (s, userId) => ({
@@ -53,6 +53,7 @@ const mapSummary = {
     content_html: s.contentHtml,
     page_style: s.pageStyle,
     font_family: s.fontFamily,
+    line_spacing: s.lineSpacing,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   }),
@@ -63,6 +64,7 @@ const mapSummary = {
     contentHtml: r.content_html,
     pageStyle: r.page_style,
     fontFamily: r.font_family || "padrao",
+    lineSpacing: r.line_spacing || "media",
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }),
@@ -302,6 +304,15 @@ class Store {
     this.save();
     db.insertRow("folders", mapFolder.toDb(folder, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
     return folder;
+  }
+  // patch aceita { name, mode } — usado hoje só pra "migrar pra outra Ala"
+  // (o campo mode), mas fica genérico pra qualquer edição futura de pasta.
+  updateFolder(folderId, patch) {
+    const f = this.state.folders.find((x) => x.id === folderId);
+    if (!f) return;
+    Object.assign(f, patch);
+    this.save();
+    db.updateRow("folders", folderId, mapFolder.toDb(f, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
   }
   folderPath(folderId) {
     const names = [];

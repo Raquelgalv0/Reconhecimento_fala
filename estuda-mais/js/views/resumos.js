@@ -63,6 +63,14 @@ const FONT_STYLES = [
   { id: "moderna", label: "Moderna", fontName: "Manrope", sample: "Assim fica o seu texto" },
 ];
 
+// "media" é o espaçamento padrão de sempre (1.85) — só ganhou nome pra virar
+// uma opção entre outras, sem mudar a aparência de resumos já existentes.
+const LINE_SPACINGS = [
+  { id: "simples", label: "Simples" },
+  { id: "media", label: "1,5 linhas" },
+  { id: "duplo", label: "Duplo" },
+];
+
 // ---------------------------------------------------------------- LIST ----
 function renderList(container, activeFolderId) {
   const folders = store.flattenFolders();
@@ -247,18 +255,37 @@ function renderEditor(container, summaryId) {
       <div class="tb-group">
         <button data-cmd="bold" title="Negrito"><b>B</b></button>
         <button data-cmd="italic" title="Itálico"><i>I</i></button>
+        <button data-cmd="underline" title="Sublinhado"><u>U</u></button>
+        <button data-cmd="removeFormat" title="Limpar formatação">${Icon("eraser", { size: 14 })}</button>
+      </div>
+      <div class="sep"></div>
+      <div class="tb-group">
+        <button data-cmd="formatBlock:p" title="Parágrafo normal">P</button>
         <button data-cmd="formatBlock:h2" title="Título">H2</button>
         <button data-cmd="formatBlock:h3" title="Subtítulo">H3</button>
       </div>
       <div class="sep"></div>
       <div class="tb-group">
-        <button data-cmd="insertUnorderedList" title="Lista">${Icon("list", { size: 15 })}</button>
+        <button data-cmd="insertUnorderedList" title="Lista com marcadores">${Icon("list", { size: 15 })}</button>
+        <button data-cmd="insertOrderedList" title="Lista numerada">${Icon("orderedList", { size: 15 })}</button>
         <button data-cmd="formatBlock:blockquote" title="Citação">${Icon("quote", { size: 15 })}</button>
+      </div>
+      <div class="sep"></div>
+      <div class="tb-group">
+        <button data-cmd="justifyLeft" title="Alinhar à esquerda">${Icon("alignLeft", { size: 15 })}</button>
+        <button data-cmd="justifyCenter" title="Centralizar">${Icon("alignCenter", { size: 15 })}</button>
+        <button data-cmd="justifyRight" title="Alinhar à direita">${Icon("alignRight", { size: 15 })}</button>
+        <button data-cmd="justifyFull" title="Justificar">${Icon("alignJustify", { size: 15 })}</button>
+        <button data-cmd="outdent" title="Diminuir recuo">${Icon("indentDecrease", { size: 15 })}</button>
+        <button data-cmd="indent" title="Aumentar recuo">${Icon("indentIncrease", { size: 15 })}</button>
       </div>
       <div class="sep"></div>
       <div class="tb-group">
         <button class="toolbar-font-btn" id="font-style-btn" title="Fonte do resumo">
           ${Icon("pencil", { size: 13 })}<span>${FONT_STYLES.find((f) => f.id === (summary.fontFamily || "padrao")).label}</span>
+        </button>
+        <button class="toolbar-font-btn" id="line-spacing-btn" title="Espaçamento entre linhas">
+          ${Icon("lineSpacing", { size: 13 })}<span>${LINE_SPACINGS.find((l) => l.id === (summary.lineSpacing || "media")).label}</span>
         </button>
       </div>
       <div class="sep"></div>
@@ -307,7 +334,7 @@ function renderEditor(container, summaryId) {
       <button class="ai-btn" id="ai-questions">${Icon("helpCircle", { size: 14 })}<span>Transformar em questões</span></button>
     </div>
     <input type="file" id="editor-image-input" accept="image/*" style="display:none" />
-    <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"}" contenteditable="true" data-focus-guard
+    <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"} ls--${summary.lineSpacing || "media"}" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
   `;
 
@@ -480,6 +507,7 @@ function renderEditor(container, summaryId) {
   container.querySelector("#ai-questions").addEventListener("click", () => openGenerateQuestionsModal(summaryId, editorBody));
   container.querySelector("#page-style-btn").addEventListener("click", () => openPageStyleModal(summaryId, summary.pageStyle || "minimal"));
   container.querySelector("#font-style-btn").addEventListener("click", () => openFontModal(summaryId, summary.fontFamily || "padrao"));
+  container.querySelector("#line-spacing-btn").addEventListener("click", () => openLineSpacingModal(summaryId, summary.lineSpacing || "media"));
 
   // --- insert-block toolbar ---
   const INSERTERS = {
@@ -1081,4 +1109,29 @@ function openFontModal(summaryId, currentFont) {
 function applyFontFamily(summaryId, fontId) {
   store.updateSummary(summaryId, { fontFamily: fontId });
   showToast(`Fonte "${FONT_STYLES.find((f) => f.id === fontId).label}" aplicada.`, "pencil");
+}
+
+function openLineSpacingModal(summaryId, current) {
+  openModal(
+    `
+    <h3>${Icon("lineSpacing", { size: 16 })} Espaçamento entre linhas</h3>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${LINE_SPACINGS.map((l) => `<button type="button" class="btn btn-sm ${l.id === current ? "btn-primary" : "btn-ghost"}" data-spacing="${l.id}">${l.label}</button>`).join("")}
+    </div>`,
+    {
+      onMount: (modal) => {
+        modal.querySelectorAll("[data-spacing]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyLineSpacing(summaryId, btn.dataset.spacing);
+            closeModal();
+          });
+        });
+      },
+    }
+  );
+}
+
+function applyLineSpacing(summaryId, spacingId) {
+  store.updateSummary(summaryId, { lineSpacing: spacingId });
+  showToast(`Espaçamento "${LINE_SPACINGS.find((l) => l.id === spacingId).label}" aplicado.`, "lineSpacing");
 }

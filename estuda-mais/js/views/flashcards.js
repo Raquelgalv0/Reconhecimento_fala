@@ -274,7 +274,11 @@ function renderReview(container, deckId) {
     session.index++;
     return renderReview(container, deckId);
   }
-  const folderName = store.folderPath(card.folderId);
+  // Mostra o título do resumo de origem (mais útil pra localizar de onde o
+  // cartão veio); se o flashcard foi criado manualmente (sem resumo
+  // vinculado), cai de volta pro nome da pasta/assunto.
+  const sourceSummary = card.summaryId ? store.state.summaries.find((s) => s.id === card.summaryId) : null;
+  const cardTopLabel = sourceSummary ? sourceSummary.title || "Sem título" : store.folderPath(card.folderId);
 
   container.innerHTML = `
     <div class="review-stage">
@@ -282,13 +286,13 @@ function renderReview(container, deckId) {
       <div class="flip-card">
         <div class="flip-card-inner" id="flip-inner">
           <div class="flip-face front">
-            <div class="card-folder-label">${esc(folderName)}</div>
+            <div class="card-folder-label">${esc(cardTopLabel)}</div>
             <div class="kicker">Pergunta</div>
             <div class="content">${esc(card.front)}</div>
             <div class="flip-hint">clique no cartão para virar</div>
           </div>
           <div class="flip-face back">
-            <div class="card-folder-label">${esc(folderName)}</div>
+            <div class="card-folder-label">${esc(cardTopLabel)}</div>
             <div class="kicker">Resposta</div>
             <div class="content">${esc(card.back)}</div>
           </div>

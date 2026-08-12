@@ -10,6 +10,20 @@ import { currentSpotifyUrl, promptSpotifyUrl, setSpotifyUrl } from "../spotify-p
 const STUDY_PRESETS = [15, 25, 50];
 const BREAK_PRESETS = [5, 10, 15];
 
+// Frases curtas mostradas durante a sessão de estudo — um empurrãozinho
+// contra a maior distração de todas: o celular.
+const FOCUS_PHRASES = [
+  "Não vá se distrair no celular.",
+  "Deixa o celular de lado — depois você confere.",
+  "Uma notificação pode esperar. Seu foco, não.",
+  "Você já começou. Não para agora.",
+  "Sua cidade só cresce com foco de verdade.",
+  "Respira. Volta o olho pra tela. Segue firme.",
+];
+function randomFocusPhrase() {
+  return FOCUS_PHRASES[Math.floor(Math.random() * FOCUS_PHRASES.length)];
+}
+
 // Níveis da cidade — puramente cosmético, dá o "senso de progresso" tipo jogo.
 const CITY_LEVELS = [
   { min: 0, label: "Terreno vazio", icon: "house" },
@@ -321,12 +335,14 @@ function focusStageHtml(state) {
 
   if (state.phase === "study") {
     const cityCount = (store.state.city || []).length;
+    if (!state.phrase) state.phrase = randomFocusPhrase();
     return `
       <div class="focus-running">
         <div class="focus-phase-label">Erguendo prédio...</div>
         <div class="focus-countdown focus-countdown--sm" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
         ${constructionSceneHtml(cityCount)}
         <div class="focus-progress-track"><div class="focus-progress-fill" id="foco-progress-fill"></div></div>
+        <div class="focus-phrase">${Icon("lightbulb", { size: 13 })}<span>${state.phrase}</span></div>
         <button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>
       </div>`;
   }
@@ -393,6 +409,7 @@ function wireStage(container, state) {
     container.querySelector("#focus-start").addEventListener("click", () => {
       state.phase = "study";
       state.endsAt = Date.now() + state.studyMinutes * 60000;
+      state.phrase = randomFocusPhrase();
       saveFocoState();
       renderFoco(container);
     });

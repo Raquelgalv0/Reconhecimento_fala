@@ -153,6 +153,11 @@ input, textarea, select {
 .folder-row:hover { background: var(--bg-sidebar-hover); cursor: pointer; }
 .folder-row.active { background: var(--bg-sidebar-hover); color: #fff; font-weight: 600; }
 .folder-row.sub { padding-left: 26px; font-size: 13px; color: #a494ac; }
+.folder-mode-tag {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  background: rgba(255,255,255,0.1); color: #cfc4d6; border-radius: 999px; padding: 2px 7px; flex-shrink: 0;
+}
+.folder-row.active .folder-mode-tag { background: rgba(255,255,255,0.18); color: #fff; }
 .folder-row .count { margin-left: auto; font-size: 11px; color: #948a9c; }
 .folder-row.active .count { color: #bcb2c2; }
 .folder-row.drop-target { background: var(--accent); color: #fff; outline: 2px dashed rgba(255, 255, 255, 0.6); outline-offset: -2px; }
@@ -765,6 +770,11 @@ mark.hl-azul { background: #c7dcf7; }
 .font--moderna { font-family: "Manrope", var(--font-sans); }
 .font--moderna h2, .font--moderna h3 { font-family: "Manrope", var(--font-sans); font-weight: 700; letter-spacing: -0.01em; }
 
+/* --- Espaçamento entre linhas (por resumo) --- */
+.ls--simples { line-height: 1.3; }
+.ls--media { line-height: 1.85; }
+.ls--duplo { line-height: 2.4; }
+
 .font-option-list { display: flex; flex-direction: column; gap: 8px; }
 .font-option {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -999,6 +1009,12 @@ mark.hl-azul { background: #c7dcf7; }
 
 .focus-progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
 .focus-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--amber)); border-radius: 999px; transition: width 0.25s linear; }
+
+.focus-phrase {
+  display: flex; align-items: center; gap: 7px; justify-content: center; text-align: left;
+  background: var(--accent-soft); color: #4b3fa0; font-size: 12.5px; font-weight: 600;
+  border-radius: 10px; padding: 9px 12px; margin-top: 4px;
+}
 
 .focus-done { padding: 10px 0; }
 .focus-done-house { position: relative; display: flex; justify-content: center; margin-bottom: 10px; }
