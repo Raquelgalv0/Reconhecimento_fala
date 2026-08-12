@@ -9,11 +9,13 @@ import { renderFoco } from "./views/foco.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
+import { mountSpotifyPlayer } from "./spotify-player.js";
 
 const MODES = [
   { id: "concurso", icon: "barChart", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
   { id: "vestibular", icon: "graduationCap", title: "Vestibular", desc: "Resumo por tópico, flashcards essenciais e metas de conteúdo." },
   { id: "graduacao", icon: "landmark", title: "Graduação", desc: "Organização por disciplina, datas de provas e revisão para retenção." },
+  { id: "medicina", icon: "pulse", title: "Medicina", desc: "Resumos com modelo clínico, questões de caso clínico e conceituais, flashcards por assunto." },
 ];
 
 const appRoot = document.getElementById("app");
@@ -266,7 +268,10 @@ function renderShell() {
         <div class="notif-dropdown" id="notif-dropdown" hidden></div>
       </div>
       <main class="main" id="main"></main>
+      <div id="spotify-mini-root" hidden></div>
     </div>`;
+
+  mountSpotifyPlayer(appRoot.querySelector("#spotify-mini-root"));
 
   const sidebarEl = appRoot.querySelector("#sidebar");
   const mainEl = appRoot.querySelector("#main");
@@ -366,7 +371,7 @@ function renderMain(mainEl) {
   return renderDashboard(mainEl);
 }
 
-const MODE_TAG = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação" };
+const MODE_TAG = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação", medicina: "Medicina" };
 
 function renderSidebar(sidebarEl) {
   const { route } = store.state.ui;

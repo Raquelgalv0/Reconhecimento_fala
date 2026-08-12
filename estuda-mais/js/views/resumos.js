@@ -900,7 +900,18 @@ function openAiGenerateModal(summaryId, editorBody) {
 function openGenerateQuestionsModal(summaryId, editorBody) {
   const summary = store.state.summaries.find((s) => s.id === summaryId);
   const isMedicina = (summary?.pageStyle || "minimal") === "medicina";
-  let style = "conceitual";
+  // Clínico e conceitual podem ser marcados juntos (vira "misto"); dificuldade
+  // é sempre uma escolha única entre as 4 opções (Misto aqui é uma 4ª opção,
+  // não uma combinação de outras).
+  const activeStyles = new Set(["conceitual"]);
+  let difficulty = "medio";
+
+  const DIFFICULTIES = [
+    { id: "facil", label: "Fácil" },
+    { id: "medio", label: "Médio" },
+    { id: "dificil", label: "Difícil" },
+    { id: "misto", label: "Misto" },
+  ];
 
   const bodyHtml = `
     <h3>${Icon("helpCircle", { size: 16 })} Transformar em questões</h3>
@@ -908,14 +919,20 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
     ${
       isMedicina
         ? `<div class="field">
-      <label>Tipo de questão</label>
+      <label>Tipo de questão (marque uma ou as duas)</label>
       <div class="btn-row">
-        <button type="button" class="btn btn-sm btn-primary" id="qstyle-clinico" data-qstyle="clinico">${Icon("pulse", { size: 13 })}<span>Caso clínico</span></button>
-        <button type="button" class="btn btn-sm btn-ghost" id="qstyle-conceitual" data-qstyle="conceitual">${Icon("lightbulb", { size: 13 })}<span>Conceitual</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" id="qstyle-clinico" data-qstyle="clinico">${Icon("pulse", { size: 13 })}<span>Caso clínico</span></button>
+        <button type="button" class="btn btn-sm btn-primary" id="qstyle-conceitual" data-qstyle="conceitual">${Icon("lightbulb", { size: 13 })}<span>Conceitual</span></button>
       </div>
     </div>`
         : ""
     }
+    <div class="field">
+      <label>Nível de dificuldade</label>
+      <div class="btn-row" id="qdifficulty-row">
+        ${DIFFICULTIES.map((d) => `<button type="button" class="btn btn-sm ${d.id === difficulty ? "btn-primary" : "btn-ghost"}" data-qdifficulty="${d.id}">${d.label}</button>`).join("")}
+      </div>
+    </div>
     <div class="field">
       <label>Quantas questões?</label>
       <input type="number" id="q-count" min="1" max="10" value="3" />
@@ -927,21 +944,35 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
 
   openModal(bodyHtml, {
     onMount: (modal) => {
-      style = isMedicina ? "clinico" : "conceitual";
+      if (isMedicina) activeStyles.add("clinico");
       modal.querySelector("#cancel").addEventListener("click", closeModal);
       if (isMedicina) {
         const clinicoBtn = modal.querySelector("#qstyle-clinico");
         const conceitualBtn = modal.querySelector("#qstyle-conceitual");
-        const setStyle = (s) => {
-          style = s;
-          clinicoBtn.classList.toggle("btn-primary", s === "clinico");
-          clinicoBtn.classList.toggle("btn-ghost", s !== "clinico");
-          conceitualBtn.classList.toggle("btn-primary", s === "conceitual");
-          conceitualBtn.classList.toggle("btn-ghost", s !== "conceitual");
+        clinicoBtn.classList.add("btn-primary");
+        clinicoBtn.classList.remove("btn-ghost");
+        const toggleStyle = (id, btn) => {
+          if (activeStyles.has(id)) {
+            if (activeStyles.size === 1) return; // sempre precisa de pelo menos um tipo marcado
+            activeStyles.delete(id);
+          } else {
+            activeStyles.add(id);
+          }
+          btn.classList.toggle("btn-primary", activeStyles.has(id));
+          btn.classList.toggle("btn-ghost", !activeStyles.has(id));
         };
-        clinicoBtn.addEventListener("click", () => setStyle("clinico"));
-        conceitualBtn.addEventListener("click", () => setStyle("conceitual"));
+        clinicoBtn.addEventListener("click", () => toggleStyle("clinico", clinicoBtn));
+        conceitualBtn.addEventListener("click", () => toggleStyle("conceitual", conceitualBtn));
       }
+      modal.querySelectorAll("[data-qdifficulty]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          difficulty = btn.dataset.qdifficulty;
+          modal.querySelectorAll("[data-qdifficulty]").forEach((b) => {
+            b.classList.toggle("btn-primary", b.dataset.qdifficulty === difficulty);
+            b.classList.toggle("btn-ghost", b.dataset.qdifficulty !== difficulty);
+          });
+        });
+      });
       modal.querySelector("#confirm").addEventListener("click", async () => {
         const text = stripHtml(editorBody.innerHTML).trim();
         if (!text) {
@@ -949,17 +980,19 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
           return;
         }
         const count = Math.min(10, Math.max(1, parseInt(modal.querySelector("#q-count").value, 10) || 3));
+        const style = activeStyles.size === 2 ? "misto" : [...activeStyles][0];
         const confirmBtn = modal.querySelector("#confirm");
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Gerando...";
         try {
-          const questions = await generateQuestionsFromText(text, count, style);
+          const questions = await generateQuestionsFromText(text, count, style, difficulty);
           questions.forEach((q) => {
             store.addQuestion({
               folderId: summary.folderId,
               statement: q.statement,
               alternatives: q.alternatives,
               correctId: q.correctId,
+              difficulty: q.difficulty || (difficulty === "misto" ? "medio" : difficulty),
             });
           });
           closeModal();

@@ -5,7 +5,7 @@ function esc(s) {
   return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
-const MODE_LABEL = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação" };
+const MODE_LABEL = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação", medicina: "Medicina" };
 const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MONTH_LABELS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -157,6 +157,11 @@ export function renderDashboard(container) {
         <button class="btn btn-primary" id="go-review" ${dueToday === 0 ? "disabled style='opacity:.5;cursor:default'" : ""}>${Icon("flame", { size: 15 })}<span>Revisar hoje (${dueToday})</span></button>
       </div>
     </div>
+    ${
+      modes.includes("medicina")
+        ? `<div class="medicina-banner">${Icon("pulse", { size: 15 })}<span>Estude para cuidar dos outros, mas também cuide de si mesmo. Bons estudos!</span></div>`
+        : ""
+    }
 
     <div class="stat-grid">
       <div class="stat-card"><div class="label">Resumos</div><div class="value">${totalSummaries}</div></div>
