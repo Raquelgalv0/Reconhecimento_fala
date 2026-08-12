@@ -110,6 +110,7 @@ function renderList(container, activeFolderId) {
           const folderName = store.state.folders.find((f) => f.id === s.folderId)?.name || "";
           return `
         <div class="summary-card" data-open="${s.id}">
+          <button class="summary-card-delete" data-delete-summary="${s.id}" title="Excluir resumo">${Icon("trash", { size: 13 })}</button>
           <h4>${escapeAttr(s.title || "Sem título")}</h4>
           <div class="excerpt">${escapeAttr(stripHtml(s.contentHtml)).slice(0, 140) || "Resumo vazio. Clique para escrever."}</div>
           <div class="meta">
@@ -131,6 +132,18 @@ function renderList(container, activeFolderId) {
   });
   container.querySelectorAll("[data-open]").forEach((card) => {
     card.addEventListener("click", () => store.setRoute("resumos", { activeSummaryId: card.dataset.open }));
+  });
+  container.querySelectorAll("[data-delete-summary]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteSummary;
+      const summary = store.state.summaries.find((s) => s.id === id);
+      if (!summary) return;
+      if (confirm(`Excluir o resumo "${summary.title || "Sem título"}"? Os flashcards já criados a partir dele são mantidos.`)) {
+        store.deleteSummary(id);
+        showToast("Resumo excluído.", "trash");
+      }
+    });
   });
   const newBtn = container.querySelector("#btn-new-summary");
   const newBtn2 = container.querySelector("#new-card-inline");

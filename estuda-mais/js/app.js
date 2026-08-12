@@ -6,17 +6,12 @@ import { renderQuestoes } from "./views/questoes.js";
 import { renderDesempenho } from "./views/desempenho.js";
 import { renderUpload } from "./views/upload.js";
 import { renderFoco } from "./views/foco.js";
+import { renderAssuntos } from "./views/assuntos.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
 import { mountSpotifyPlayer } from "./spotify-player.js";
-
-const MODES = [
-  { id: "concurso", icon: "barChart", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
-  { id: "vestibular", icon: "graduationCap", title: "Vestibular", desc: "Resumo por tópico, flashcards essenciais e metas de conteúdo." },
-  { id: "graduacao", icon: "landmark", title: "Graduação", desc: "Organização por disciplina, datas de provas e revisão para retenção." },
-  { id: "medicina", icon: "pulse", title: "Medicina", desc: "Resumos com modelo clínico, questões de caso clínico e conceituais, flashcards por assunto." },
-];
+import { MODES, MODE_TAG } from "./modes.js";
 
 const appRoot = document.getElementById("app");
 
@@ -368,15 +363,13 @@ function renderMain(mainEl) {
   if (route === "desempenho") return renderDesempenho(mainEl);
   if (route === "upload") return renderUpload(mainEl);
   if (route === "foco") return renderFoco(mainEl);
+  if (route === "assuntos") return renderAssuntos(mainEl);
   return renderDashboard(mainEl);
 }
-
-const MODE_TAG = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação", medicina: "Medicina" };
 
 function renderSidebar(sidebarEl) {
   const { route } = store.state.ui;
   const dueToday = store.cardsDueToday().length;
-  const folders = store.flattenFolders();
 
   sidebarEl.innerHTML = `
     <div class="brand"><span class="dot">●</span> HiperNotes</div>
@@ -387,28 +380,10 @@ function renderSidebar(sidebarEl) {
       <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">${Icon("fileText")}<span>Resumos</span></button>
       <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
+      <button class="nav-item ${route === "assuntos" ? "active" : ""}" data-nav="assuntos">${Icon("folder")}<span>Assuntos</span></button>
       <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
       <button class="nav-item ${route === "upload" ? "active" : ""}" data-nav="upload">${Icon("upload")}<span>Upload de Materiais</span></button>
       <button class="nav-item ${route === "foco" ? "active" : ""}" data-nav="foco">${Icon("clock")}<span>Foco</span></button>
-    </div>
-
-    <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
-    <div class="folder-tree" id="folder-tree">
-      ${folders
-        .map(
-          (f) => `
-        <div class="folder-row ${f.depth > 0 ? "sub" : ""} ${f.kind === "caderno" ? "caderno-row" : ""}" data-folder="${f.id}">
-          ${f.depth > 0 ? "" : Icon(f.kind === "caderno" ? "notebook" : "folder", { size: 14, cls: "folder-icon" })}<span>${escapeHtml(f.name)}</span>
-          ${f.depth === 0 && f.mode ? `<span class="folder-mode-tag">${MODE_TAG[f.mode] || f.mode}</span>` : ""}
-          <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
-          <div class="folder-actions">
-            <button class="icon-btn" data-add-sub="${f.id}" title="Novo bloco">${Icon("plus", { size: 12 })}</button>
-            ${f.depth === 0 ? `<button class="icon-btn" data-move-folder="${f.id}" title="Migrar para outra Ala">${Icon("map", { size: 12 })}</button>` : ""}
-            <button class="icon-btn icon-btn-danger" data-delete-folder="${f.id}" title="Apagar pasta">${Icon("trash", { size: 12 })}</button>
-          </div>
-        </div>`
-        )
-        .join("")}
     </div>
 
     <div class="sidebar-footer">
@@ -434,77 +409,8 @@ function renderSidebar(sidebarEl) {
       else if (target === "desempenho") store.setRoute("desempenho");
       else if (target === "upload") store.setRoute("upload");
       else if (target === "foco") store.setRoute("foco");
+      else if (target === "assuntos") store.setRoute("assuntos");
       else store.setRoute("dashboard");
-    });
-  });
-
-  sidebarEl.querySelectorAll("[data-folder]").forEach((row) => {
-    row.addEventListener("click", (e) => {
-      if (e.target.closest("[data-add-sub]")) return;
-      const folderId = row.dataset.folder;
-      if (store.state.ui.route === "flashcards") {
-        store.setRoute("flashcards", { activeDeckId: folderId, reviewing: false });
-      } else if (store.state.ui.route === "questoes") {
-        store.setRoute("questoes", { activeQuestionFolderId: folderId, practicing: false });
-      } else {
-        store.setRoute("resumos", { activeFolderId: folderId, activeSummaryId: null });
-      }
-    });
-    // Soltar um flashcard arrastado aqui move ele pra este assunto/pasta.
-    row.addEventListener("dragover", (e) => {
-      if (!e.dataTransfer.types.includes("application/x-flashcard-id")) return;
-      e.preventDefault();
-      row.classList.add("drop-target");
-    });
-    row.addEventListener("dragleave", () => row.classList.remove("drop-target"));
-    row.addEventListener("drop", (e) => {
-      row.classList.remove("drop-target");
-      const cardId = e.dataTransfer.getData("application/x-flashcard-id");
-      if (!cardId) return;
-      e.preventDefault();
-      store.updateFlashcard(cardId, { folderId: row.dataset.folder });
-      showToast(`Flashcard movido pra "${store.folderPath(row.dataset.folder)}".`, "folder");
-    });
-  });
-
-  sidebarEl.querySelector("#add-root-folder").addEventListener("click", () => {
-    const name = prompt("Nome do novo assunto:");
-    if (name && name.trim()) store.addFolder(name.trim(), null);
-  });
-
-  sidebarEl.querySelectorAll("[data-add-sub]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const name = prompt("Nome do bloco:");
-      if (name && name.trim()) store.addFolder(name.trim(), btn.dataset.addSub);
-    });
-  });
-
-  sidebarEl.querySelectorAll("[data-move-folder]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openMoveFolderModal(btn.dataset.moveFolder);
-    });
-  });
-
-  sidebarEl.querySelectorAll("[data-delete-folder]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const folderId = btn.dataset.deleteFolder;
-      const descendantIds = store.descendantFolderIds(folderId);
-      const subCount = descendantIds.length - 1;
-      const summaryCount = store.state.summaries.filter((s) => descendantIds.includes(s.folderId)).length;
-      const cardCount = store.state.flashcards.filter((c) => descendantIds.includes(c.folderId)).length;
-      const questionCount = store.state.questions.filter((q) => descendantIds.includes(q.folderId)).length;
-      const parts = [];
-      if (subCount > 0) parts.push(`${subCount} bloco${subCount === 1 ? "" : "s"}`);
-      if (summaryCount > 0) parts.push(`${summaryCount} resumo${summaryCount === 1 ? "" : "s"}`);
-      if (cardCount > 0) parts.push(`${cardCount} flashcard${cardCount === 1 ? "" : "s"}`);
-      if (questionCount > 0) parts.push(`${questionCount} ${questionCount === 1 ? "questão" : "questões"}`);
-      const warning = parts.length ? ` Junto vai tudo o que está dentro dela: ${parts.join(", ")}.` : "";
-      if (!confirm(`Apagar "${store.folderPath(folderId)}"?${warning} Essa ação não pode ser desfeita.`)) return;
-      store.deleteFolder(folderId);
-      showToast("Pasta apagada.", "trash");
     });
   });
 
@@ -608,35 +514,6 @@ function openProfileModal() {
           });
           closeModal();
           showToast("Perfil atualizado.");
-        });
-      },
-    }
-  );
-}
-
-// Migra uma pasta de assunto (e tudo dentro dela) de uma Ala pra outra —
-// ex.: uma pasta de Graduação virar uma pasta da Ala de Medicina. Só marca
-// uma "etiqueta" de modo na pasta raiz; o conteúdo em si não muda de lugar.
-function openMoveFolderModal(folderId) {
-  const folder = store.state.folders.find((f) => f.id === folderId);
-  if (!folder) return;
-  openModal(
-    `
-    <h3>${Icon("map", { size: 16 })} Migrar "${escapeHtml(folder.name)}" para outra Ala</h3>
-    <p class="modal-sub">Move toda essa pasta (e tudo dentro dela) para outro modo de estudo.</p>
-    <div class="btn-row" style="flex-wrap:wrap;">
-      <button type="button" class="btn btn-sm ${!folder.mode ? "btn-primary" : "btn-ghost"}" data-mode="">Nenhuma Ala específica</button>
-      ${MODES.map((m) => `<button type="button" class="btn btn-sm ${folder.mode === m.id ? "btn-primary" : "btn-ghost"}" data-mode="${m.id}">${Icon(m.icon, { size: 13 })}<span>${m.title}</span></button>`).join("")}
-    </div>`,
-    {
-      onMount: (modal) => {
-        modal.querySelectorAll("[data-mode]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const mode = btn.dataset.mode || null;
-            store.updateFolder(folderId, { mode });
-            closeModal();
-            showToast(mode ? `Pasta migrada para a Ala de ${MODE_TAG[mode]}.` : "Pasta sem Ala específica agora.", "map");
-          });
         });
       },
     }
