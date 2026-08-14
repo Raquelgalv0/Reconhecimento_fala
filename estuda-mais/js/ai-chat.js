@@ -64,17 +64,25 @@ function mdToHtml(raw) {
   return html || "<p></p>";
 }
 
+// Fica no canto direito da tela, como uma aba/gaveta — não no canto
+// esquerdo (onde brigava com a sidebar) nem sobreposto ao player do
+// Spotify (que já mora no canto inferior direito). Recolhido é só um
+// botão flutuante discreto; aberto, desliza um painel de altura cheia a
+// partir da borda direita, abaixo do sininho de notificações.
 function render() {
   if (!rootEl) return;
   rootEl.innerHTML = `
-    <div class="ai-chat-bar ${expanded ? "is-expanded" : ""}">
-      <button class="ai-chat-toggle" id="ai-chat-toggle" title="${expanded ? "Recolher chat" : "Tirar dúvida com IA"}">
-        ${Icon("messageCircle", { size: 14 })}<span>Dúvidas</span>
+    <div class="ai-chat-dock ${expanded ? "is-open" : ""}">
+      <button class="ai-chat-tab" id="ai-chat-toggle" title="Tirar dúvida com IA">
+        ${Icon("messageCircle", { size: 16 })}<span>Dúvidas</span>
       </button>
-      <div class="ai-chat-body" ${expanded ? "" : "hidden"}>
+      <div class="ai-chat-panel">
         <div class="ai-chat-head">
           <span>${Icon("sparkles", { size: 13 })} Tirar dúvida com IA</span>
-          ${messages.length ? `<button class="icon-btn-ghost" id="ai-chat-clear" title="Limpar conversa">${Icon("eraser", { size: 12 })}</button>` : ""}
+          <div class="ai-chat-head-actions">
+            ${messages.length ? `<button class="icon-btn-ghost" id="ai-chat-clear" title="Limpar conversa">${Icon("eraser", { size: 12 })}</button>` : ""}
+            <button class="icon-btn-ghost" id="ai-chat-close" title="Fechar">${Icon("x", { size: 13 })}</button>
+          </div>
         </div>
         ${context ? `<div class="ai-chat-context">${Icon("fileText", { size: 11 })}<span>Sobre: ${escapeHtml(context.label)}</span><button id="ai-chat-drop-context" title="Parar de usar como contexto">${Icon("x", { size: 11 })}</button></div>` : ""}
         <div class="ai-chat-messages" id="ai-chat-messages">
@@ -97,9 +105,13 @@ function render() {
     </div>`;
 
   rootEl.querySelector("#ai-chat-toggle").addEventListener("click", () => {
-    expanded = !expanded;
+    expanded = true;
     render();
-    if (expanded) rootEl.querySelector("#ai-chat-input")?.focus();
+    rootEl.querySelector("#ai-chat-input")?.focus();
+  });
+  rootEl.querySelector("#ai-chat-close").addEventListener("click", () => {
+    expanded = false;
+    render();
   });
 
   const clearBtn = rootEl.querySelector("#ai-chat-clear");
@@ -152,6 +164,11 @@ function render() {
   };
 
   input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      expanded = false;
+      render();
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
