@@ -1,6 +1,6 @@
 import { store } from "../store.js";
 import { showToast, openModal, closeModal, relativeDue, playFeedbackSound } from "../ui-utils.js";
-import { scheduleNext, isDueToday } from "../srs.js";
+import { scheduleNext, isDueToday, previewIntervals, intervalLabel, GRADES, GRADE_LABELS } from "../srs.js";
 import { Icon } from "../icons.js";
 
 // Fila de revisão da sessão atual — guardada fora do ciclo de render para
@@ -279,6 +279,7 @@ function renderReview(container, deckId) {
   // vinculado), cai de volta pro nome da pasta/assunto.
   const sourceSummary = card.summaryId ? store.state.summaries.find((s) => s.id === card.summaryId) : null;
   const cardTopLabel = sourceSummary ? sourceSummary.title || "Sem título" : store.folderPath(card.folderId);
+  const preview = previewIntervals(card);
 
   container.innerHTML = `
     <div class="review-stage">
@@ -298,9 +299,19 @@ function renderReview(container, deckId) {
           </div>
         </div>
       </div>
-      <div class="review-actions" id="actions" style="visibility:hidden">
-        <button class="btn-erro" id="btn-errei">${Icon("x", { size: 15 })}<span>Errei</span></button>
-        <button class="btn-acerto" id="btn-acertei">${Icon("checkPlain", { size: 15 })}<span>Acertei</span></button>
+      <div class="review-actions review-actions--fsrs" id="actions" style="visibility:hidden">
+        <button class="grade-btn grade-btn--again" data-grade="${GRADES.AGAIN}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.AGAIN]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.AGAIN])}</span>
+        </button>
+        <button class="grade-btn grade-btn--hard" data-grade="${GRADES.HARD}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.HARD]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.HARD])}</span>
+        </button>
+        <button class="grade-btn grade-btn--good" data-grade="${GRADES.GOOD}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.GOOD]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.GOOD])}</span>
+        </button>
+        <button class="grade-btn grade-btn--easy" data-grade="${GRADES.EASY}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.EASY]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.EASY])}</span>
+        </button>
       </div>
     </div>`;
 
@@ -311,20 +322,22 @@ function renderReview(container, deckId) {
     actions.style.visibility = inner.classList.contains("flipped") ? "visible" : "hidden";
   });
 
-  const grade = (result) => {
-    playFeedbackSound(result === "acertou");
-    scheduleNext(card, result);
-    store.updateFlashcard(card.id, { srs: card.srs });
-    store.logStudyDay({ correct: result === "acertou" });
-    store.markFlashcardReviewedToday();
+  const grade = (gradeValue) => {
+    // A fila avança ANTES das chamadas ao store: updateFlashcard/logStudyDay
+    // disparam save() -> re-render síncrono (via safeRender em app.js), então
+    // se o índice só avançasse depois, o re-render aconteceria mostrando
+    // ainda o card antigo — travando a revisão sempre no primeiro card.
     session.index++;
+    playFeedbackSound(gradeValue !== GRADES.AGAIN);
+    scheduleNext(card, gradeValue);
+    store.updateFlashcard(card.id, { srs: card.srs });
+    store.logStudyDay({ correct: gradeValue !== GRADES.AGAIN });
+    store.markFlashcardReviewedToday();
   };
-  container.querySelector("#btn-errei").addEventListener("click", (e) => {
-    e.stopPropagation();
-    grade("errou");
-  });
-  container.querySelector("#btn-acertei").addEventListener("click", (e) => {
-    e.stopPropagation();
-    grade("acertou");
+  container.querySelectorAll("[data-grade]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      grade(Number(btn.dataset.grade));
+    });
   });
 }

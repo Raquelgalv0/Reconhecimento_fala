@@ -965,14 +965,23 @@ mark.hl-azul { background: #c7dcf7; }
 }
 
 .review-actions { display: flex; gap: 12px; margin-top: 26px; }
-.review-actions button {
-  padding: 12px 26px; border-radius: 12px; font-weight: 700; font-size: 14px;
-  display: flex; align-items: center; gap: 8px;
+
+/* 4 notas (Errei/Difícil/Bom/Fácil), no espírito do Anki — cada botão mostra
+   o intervalo que o FSRS agendaria se essa nota for escolhida. */
+.review-actions--fsrs { gap: 10px; }
+.grade-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 13.5px; min-width: 76px;
 }
-.btn-erro { background: var(--red-soft); color: var(--red); }
-.btn-erro:hover { background: #f6d3d9; }
-.btn-acerto { background: var(--green-soft); color: var(--green); }
-.btn-acerto:hover { background: #cdefdd; }
+.grade-btn .grade-interval { font-size: 11px; font-weight: 600; opacity: 0.75; }
+.grade-btn--again { background: var(--red-soft); color: var(--red); }
+.grade-btn--again:hover { background: #f6d3d9; }
+.grade-btn--hard { background: var(--amber-soft); color: var(--amber); }
+.grade-btn--hard:hover { background: #f5e2c2; }
+.grade-btn--good { background: var(--accent-soft); color: var(--accent); }
+.grade-btn--good:hover { background: #e2d9f5; }
+.grade-btn--easy { background: var(--green-soft); color: var(--green); }
+.grade-btn--easy:hover { background: #cdefdd; }
 
 .empty-review {
   text-align: center; padding: 60px 20px; color: var(--ink-soft);
