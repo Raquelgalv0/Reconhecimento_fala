@@ -5,8 +5,10 @@
 // área que o roteador troca (#main), então continua aberto e com a conversa
 // intacta mesmo navegando entre Resumos, Flashcards etc.
 import { askAiTutor } from "./ai.js";
-import { showToast } from "./ui-utils.js";
+import { showToast, stripHtml } from "./ui-utils.js";
 import { Icon } from "./icons.js";
+import { store } from "./store.js";
+import { MODE_TAG } from "./modes.js";
 
 let rootEl = null;
 let expanded = false;
@@ -31,6 +33,51 @@ export function openAiChat(ctx) {
   render();
   const input = rootEl?.querySelector("#ai-chat-input");
   if (input) input.focus();
+}
+
+// Monta um contexto automático a partir de onde a pessoa está no app agora
+// — pra sentir "agente de estudo" (sabe o que você tá fazendo) em vez de só
+// responder em branco, sem precisar clicar em "Tirar dúvida" de dentro de
+// um resumo especificamente toda vez. Usado quando abre pela aba flutuante.
+function buildAmbientContext() {
+  const ui = store.state.ui;
+
+  // Mais específico: um resumo aberto no editor agora.
+  if (ui.activeSummaryId) {
+    const summary = store.state.summaries.find((s) => s.id === ui.activeSummaryId);
+    if (summary) {
+      const text = stripHtml(summary.contentHtml || "").slice(0, 6000);
+      if (text) return { text, label: summary.title || "Sem título" };
+    }
+  }
+
+  // Um assunto/pasta específico sendo filtrado (Resumos, Flashcards ou Questões).
+  const folderId = ui.activeFolderId || ui.activeDeckId || ui.activeQuestionFolderId;
+  if (folderId) {
+    const folder = store.state.folders.find((f) => f.id === folderId);
+    if (folder) {
+      const titles = store
+        .summariesInFolder(folderId)
+        .map((s) => s.title || "Sem título")
+        .slice(0, 6);
+      const parts = [`A pessoa está vendo o assunto "${store.folderPath(folderId)}" no app agora.`];
+      if (titles.length) parts.push(`Resumos desse assunto: ${titles.join(", ")}.`);
+      parts.push(
+        `${store.cardsInFolder(folderId).length} flashcards e ${store.questionsInFolder(folderId).length} questões cadastradas nesse assunto.`
+      );
+      return { text: parts.join(" "), label: folder.name };
+    }
+  }
+
+  // Sem nada específico em foco (ex.: no Painel) — dá uma visão geral: Ala(s)
+  // ativa(s) e o resumo mais recente, pra ainda soar contextualizado.
+  const modes = (store.state.modes || []).map((m) => MODE_TAG[m] || m);
+  const recent = [...store.state.summaries].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+  const parts = [];
+  if (modes.length) parts.push(`A pessoa estuda para: ${modes.join(", ")}.`);
+  if (recent) parts.push(`O resumo mais recente dela é "${recent.title || "Sem título"}" (assunto: ${store.folderPath(recent.folderId)}).`);
+  if (!parts.length) return null;
+  return { text: parts.join(" "), label: modes[0] || "Seus estudos" };
 }
 
 function escapeHtml(s) {
@@ -105,6 +152,10 @@ function render() {
     </div>`;
 
   rootEl.querySelector("#ai-chat-toggle").addEventListener("click", () => {
+    // Recalcula o contexto toda vez que abre pela aba flutuante, pra refletir
+    // onde a pessoa está AGORA no app (pode ter mudado de tela desde a
+    // última vez que abriu o chat).
+    context = buildAmbientContext();
     expanded = true;
     render();
     rootEl.querySelector("#ai-chat-input")?.focus();
