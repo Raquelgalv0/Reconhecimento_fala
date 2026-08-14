@@ -199,7 +199,10 @@ function render() {
     messages.push({ role: "user", content: text });
     sending = true;
     render();
-    askAiTutor(messages, context?.text || null)
+    // Manda só as últimas mensagens pra IA — numa conversa longa, o
+    // histórico inteiro deixa o pedido pesado e mais lento (risco de
+    // estourar o tempo limite do servidor), sem ganhar muito em contexto.
+    askAiTutor(messages.slice(-16), context?.text || null)
       .then((reply) => {
         messages.push({ role: "assistant", content: reply });
       })

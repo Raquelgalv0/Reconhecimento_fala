@@ -5,6 +5,10 @@ import { callGroq, DEFAULT_MODEL } from "../lib/groq.js";
 import { verifyUser } from "../lib/supabase-verify.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../js/config.js";
 
+// Padrão da Vercel é curto demais pra uma resposta de chat mais longa
+// (histórico de conversa + contexto do resumo fazem a Groq demorar mais).
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Método não permitido." });

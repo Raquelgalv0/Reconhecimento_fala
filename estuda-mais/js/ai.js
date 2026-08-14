@@ -25,7 +25,10 @@ async function callAi(task, params) {
   try {
     data = await response.json();
   } catch {
-    throw new Error("O servidor local respondeu algo inesperado.");
+    if (response.status === 504) {
+      throw new Error("A IA demorou demais para responder (tempo esgotado no servidor). Tente uma pergunta mais curta ou tente de novo.");
+    }
+    throw new Error(`O servidor respondeu algo inesperado (HTTP ${response.status}).`);
   }
 
   if (!response.ok || data.error) {
