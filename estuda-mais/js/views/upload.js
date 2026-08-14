@@ -155,10 +155,84 @@ function folderOptionsHtml(selectedId) {
     .join("");
 }
 
-function mindMapHtml(mm) {
-  return `<div class="mindmap"><div class="mm-center">${esc(mm.title)}</div><div class="mm-trunk"></div><div class="mm-branches">${mm.branches
-    .map((b) => `<div class="mm-branch"><span class="mm-dot"></span>${esc(b)}</div>`)
-    .join("")}</div></div>`;
+// ---- Mapa mental interativo (clica num ramo -> ele vira o novo centro) ----
+// `path` é uma lista de índices, andando pela árvore `mm.branches` a partir
+// da raiz — mora fora do render pra sobreviver a re-renders do preview
+// inteiro, mas é resetado toda vez que um mapa novo é gerado.
+let mindMapPath = [];
+
+function mindMapNodeAt(mm, path) {
+  let node = { label: mm.title, children: mm.branches || [] };
+  for (const idx of path) {
+    const next = node.children?.[idx];
+    if (!next) break;
+    node = next;
+  }
+  return node;
+}
+
+function renderMindMapInteractive(root, mm) {
+  if (!root) return;
+  const current = mindMapNodeAt(mm, mindMapPath);
+  const children = current.children || [];
+
+  root.innerHTML = `
+    <div class="mindmap">
+      <div class="mm-breadcrumb">
+        <button type="button" class="mm-crumb ${mindMapPath.length === 0 ? "active" : ""}" data-mm-jump="0">${esc(mm.title)}</button>
+        ${mindMapPath
+          .map((idx, i) => {
+            const node = mindMapNodeAt(mm, mindMapPath.slice(0, i + 1));
+            const isLast = i === mindMapPath.length - 1;
+            return `<span class="mm-crumb-sep">›</span><button type="button" class="mm-crumb ${isLast ? "active" : ""}" data-mm-jump="${i + 1}">${esc(node.label)}</button>`;
+          })
+          .join("")}
+      </div>
+      <button type="button" class="mm-center" id="mm-center-btn" title="${mindMapPath.length ? "Voltar um nível" : ""}" ${mindMapPath.length ? "" : "disabled"}>${esc(current.label)}</button>
+      ${
+        children.length
+          ? `<div class="mm-trunk"></div><div class="mm-branches">${children
+              .map((b, i) => {
+                const hasKids = b.children && b.children.length > 0;
+                return `<button type="button" class="mm-branch ${hasKids ? "mm-branch--parent" : ""}" data-mm-child="${i}">
+                  <span class="mm-branch-label"><span class="mm-dot"></span><span>${esc(b.label)}</span></span>${hasKids ? `<span class="mm-branch-arrow">${Icon("chevronRight", { size: 13 })}</span>` : ""}
+                </button>`;
+              })
+              .join("")}</div>`
+          : `<div class="mm-leaf-note">${mindMapPath.length ? "Sem mais sub-tópicos aqui." : ""}</div>`
+      }
+    </div>`;
+
+  root.querySelectorAll("[data-mm-jump]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      mindMapPath = mindMapPath.slice(0, Number(btn.dataset.mmJump));
+      renderMindMapInteractive(root, mm);
+    });
+  });
+  root.querySelectorAll("[data-mm-child]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      mindMapPath = [...mindMapPath, Number(btn.dataset.mmChild)];
+      renderMindMapInteractive(root, mm);
+    });
+  });
+  const centerBtn = root.querySelector("#mm-center-btn");
+  if (centerBtn && mindMapPath.length) {
+    centerBtn.addEventListener("click", () => {
+      mindMapPath = mindMapPath.slice(0, -1);
+      renderMindMapInteractive(root, mm);
+    });
+  }
+}
+
+// Versão estática (sem clique) pra quando o mapa é salvo dentro de um
+// resumo — o conteúdo do resumo é HTML inerte, então em vez de esconder os
+// sub-ramos atrás de clique, mostra tudo já aninhado numa lista.
+function mindMapStaticHtml(mm) {
+  const renderChildren = (nodes) => {
+    if (!nodes || nodes.length === 0) return "";
+    return `<ul class="mm-static-list">${nodes.map((n) => `<li>${esc(n.label)}${renderChildren(n.children)}</li>`).join("")}</ul>`;
+  };
+  return `<div class="mindmap-static"><div class="mm-static-title">${esc(mm.title)}</div>${renderChildren(mm.branches)}</div>`;
 }
 
 export function renderUpload(container) {
@@ -246,7 +320,7 @@ function renderResultHtml(r) {
           ? `<div class="preview-block"><b>${Icon("fileText", { size: 13 })} Resumo: ${esc(r.title)}</b><div class="preview-box editor-body">${r.summaryHtml}</div></div>`
           : ""
       }
-      ${r.mindmap ? `<div class="preview-block"><b>${Icon("mindMap", { size: 13 })} Mapa mental</b>${mindMapHtml(r.mindmap)}</div>` : ""}
+      ${r.mindmap ? `<div class="preview-block"><b>${Icon("mindMap", { size: 13 })} Mapa mental</b><div class="field-hint" style="margin:2px 0 4px;">Clique num ramo pra ver os sub-tópicos.</div><div id="mindmap-slot"></div></div>` : ""}
       ${
         r.checklist && r.checklist.length
           ? `<div class="preview-block"><b>${Icon("checkSquare", { size: 13 })} Checklist (${r.checklist.length} itens)</b><div class="preview-box">${r.checklist
@@ -407,6 +481,7 @@ function wireForm(container) {
         wantMindmap ? generateMindMapFromText(text, title) : Promise.resolve(null),
       ]);
       lastResult = { title, folderId, summaryHtml, flashcards, questions, checklist, mindmap };
+      mindMapPath = [];
       showToast("Material processado! Revise antes de salvar.", "sparkles");
       renderUpload(container);
     } catch (err) {
@@ -421,8 +496,12 @@ function wireResult(container) {
   const discardBtn = container.querySelector("#discard-btn");
   const saveBtn = container.querySelector("#save-all-btn");
 
+  const mindmapSlot = container.querySelector("#mindmap-slot");
+  if (mindmapSlot && lastResult?.mindmap) renderMindMapInteractive(mindmapSlot, lastResult.mindmap);
+
   discardBtn.addEventListener("click", () => {
     lastResult = null;
+    mindMapPath = [];
     renderUpload(container);
   });
 
@@ -432,7 +511,7 @@ function wireResult(container) {
 
     if (r.summaryHtml || r.mindmap || r.checklist) {
       let html = r.summaryHtml || "";
-      if (r.mindmap) html += mindMapHtml(r.mindmap);
+      if (r.mindmap) html += mindMapStaticHtml(r.mindmap);
       if (r.checklist && r.checklist.length) {
         html +=
           `<h3>Checklist de revisão</h3>` +
@@ -450,6 +529,7 @@ function wireResult(container) {
     }
 
     lastResult = null;
+    mindMapPath = [];
     showToast("Material salvo: resumo, flashcards e questões sincronizados.", "check");
     if (summaryId) store.setRoute("resumos", { activeSummaryId: summaryId });
     else renderUpload(container);

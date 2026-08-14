@@ -76,8 +76,8 @@ export function buildPrompt(task, params) {
     case "mindmap": {
       const { text, title } = params;
       return {
-        system: `Você organiza um material de aula em um mapa mental simples: um tópico central e até 6 ramos (subtemas curtos). ${common}`,
-        user: `Título (opcional): ${title || "(sem título)"}\nMaterial:\n"""${text}"""\n\nResponda em JSON: {"title": "...", "branches": ["...", "..."]} com até 6 ramos curtos (no máximo ~10 palavras cada).`,
+        system: `Você organiza um material de aula em um mapa mental hierárquico (tópico central, ramos, e sub-ramos dentro de cada ramo), pra alguém navegar clicando de tópico em tópico. ${common}`,
+        user: `Título (opcional): ${title || "(sem título)"}\nMaterial:\n"""${text}"""\n\nMonte até 6 ramos principais curtos (no máximo ~8 palavras cada). Cada ramo principal deve ter de 2 a 5 sub-ramos (também curtos), e cada sub-ramo PODE ter até 4 sub-sub-ramos se o material tiver profundidade suficiente pra isso (senão, deixe a lista de filhos vazia). Não invente conteúdo que não esteja no material.\nResponda em JSON: {"title": "...", "branches": [{"label": "...", "children": [{"label": "...", "children": [{"label": "...", "children": []}]}]}]}`,
       };
     }
     default:
