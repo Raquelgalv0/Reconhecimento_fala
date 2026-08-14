@@ -168,10 +168,13 @@ function folderOptionsHtml(selectedId) {
 
 function openQuestionModal(questionId) {
   const editing = questionId ? store.state.questions.find((q) => q.id === questionId) : null;
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   const initialAlts = editing ? editing.alternatives : [{ id: "A", text: "" }, { id: "B", text: "" }];
 

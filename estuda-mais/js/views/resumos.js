@@ -160,10 +160,13 @@ function renderList(container, activeFolderId) {
 }
 
 function openNewSubfolderModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie um assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   openModal(
     `
@@ -203,10 +206,13 @@ function openNewSubfolderModal(defaultFolderId) {
 }
 
 function openNewSummaryModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   openModal(
     `

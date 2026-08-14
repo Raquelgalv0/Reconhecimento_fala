@@ -376,7 +376,9 @@ function renderSidebar(sidebarEl) {
 
   sidebarEl.innerHTML = `
     <div class="brand"><span class="dot">●</span> HiperNotes</div>
-    <div class="mode-badges">${(store.state.modes || []).map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`).join("")}</div>
+    <button class="mode-badges" id="mode-badges-btn" title="Trocar de Ala (Concurso, Vestibular, Graduação, Medicina...)">${(store.state.modes || [])
+      .map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`)
+      .join("") || `<span class="mode-badge mode-badge--empty">${Icon("plus", { size: 10 })}<span>Escolher Ala</span></span>`}</button>
 
     <div class="nav">
       <button class="nav-item ${route === "dashboard" ? "active" : ""}" data-nav="dashboard">${Icon("home")}<span>Painel</span></button>
@@ -418,6 +420,50 @@ function renderSidebar(sidebarEl) {
   });
 
   sidebarEl.querySelector("#edit-profile-btn").addEventListener("click", openProfileModal);
+  sidebarEl.querySelector("#mode-badges-btn").addEventListener("click", openModesModal);
+}
+
+// Deixa trocar quais Alas (Concurso/Vestibular/Graduação/Medicina) estão
+// ativas sem precisar refazer o onboarding — clicando nas etiquetas da
+// sidebar. Mesma lista de MODES do onboarding, com toggle múltiplo.
+function openModesModal() {
+  const selected = new Set(store.state.modes || []);
+  openModal(
+    `
+    <h3>${Icon("map", { size: 16 })} Suas Alas de estudo</h3>
+    <p class="modal-sub">Marque uma ou mais — o app ajusta prioridades e relatórios pra cada uma.</p>
+    <div id="modes-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="confirm">Salvar</button>
+    </div>`,
+    {
+      onMount: (modal) => {
+        const list = modal.querySelector("#modes-list");
+        MODES.forEach((m) => {
+          const card = document.createElement("div");
+          card.className = `checkbox-card${selected.has(m.id) ? " selected" : ""}`;
+          card.innerHTML = `<span class="mode-icon">${Icon(m.icon, { size: 19 })}</span><div><b>${m.title}</b><span>${m.desc}</span></div>`;
+          card.addEventListener("click", () => {
+            if (selected.has(m.id)) selected.delete(m.id);
+            else selected.add(m.id);
+            card.classList.toggle("selected");
+          });
+          list.appendChild(card);
+        });
+        modal.querySelector("#cancel").addEventListener("click", closeModal);
+        modal.querySelector("#confirm").addEventListener("click", () => {
+          if (selected.size === 0) {
+            showToast("Escolha pelo menos uma Ala.", "alertCircle");
+            return;
+          }
+          store.setModes([...selected]);
+          closeModal();
+          showToast("Alas atualizadas.", "map");
+        });
+      },
+    }
+  );
 }
 
 function openProfileModal() {

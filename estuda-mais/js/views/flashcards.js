@@ -52,7 +52,7 @@ function renderDecksGrid(container) {
         })
         .join("")}
     </div>
-    ${folders.length === 0 ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na barra lateral para começar.</div>` : ""}
+    ${folders.length === 0 ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na aba Assuntos, ou clique em "Novo flashcard" pra criar o primeiro na hora.</div>` : ""}
   `;
 
   container.querySelectorAll("[data-deck]").forEach((el) => {
@@ -93,8 +93,7 @@ function renderDeckDetail(container, deckId) {
       ${cards
         .map(
           (c) => `
-        <div class="flash-row" data-card="${c.id}" draggable="true" title="Arraste pra um assunto na barra lateral pra mover">
-          <span class="drag-handle">${Icon("menu", { size: 13 })}</span>
+        <div class="flash-row" data-card="${c.id}">
           <span class="front">${esc(c.front)}</span>
           <span class="due-tag ${isDueToday(c) ? "today" : ""}">${isDueToday(c) ? "revisar hoje" : `próx. rev. ${relativeDue(c.srs.dueDate)}`}</span>
           <button class="btn btn-sm btn-ghost" data-edit="${c.id}">${Icon("pencil", { size: 13 })}</button>
@@ -103,7 +102,7 @@ function renderDeckDetail(container, deckId) {
         .join("")}
     </div>
     ${cards.length === 0 ? `<div class="empty-state"><div class="big">${Icon("layers", { size: 30 })}</div>Nenhum flashcard neste baralho ainda.</div>` : ""}
-    ${cards.length > 0 ? `<div class="field-hint" style="margin-top:8px;">Dica: arraste um flashcard pra cima de um assunto na barra lateral pra mover ele de pasta.</div>` : ""}
+    ${cards.length > 0 ? `<div class="field-hint" style="margin-top:8px;">Dica: clique no lápis pra editar um flashcard e mudar ele de assunto.</div>` : ""}
   `;
 
   container.querySelector("#back").addEventListener("click", () => store.setRoute("flashcards", { activeDeckId: null }));
@@ -114,14 +113,6 @@ function renderDeckDetail(container, deckId) {
       e.stopPropagation();
       openEditCardModal(btn.dataset.edit);
     });
-  });
-  container.querySelectorAll(".flash-row[draggable]").forEach((row) => {
-    row.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("application/x-flashcard-id", row.dataset.card);
-      e.dataTransfer.effectAllowed = "move";
-      row.classList.add("dragging");
-    });
-    row.addEventListener("dragend", () => row.classList.remove("dragging"));
   });
 }
 
@@ -134,10 +125,13 @@ function folderOptionsHtml(selectedId) {
 }
 
 function openManualCardModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   const initialFolder = defaultFolderId || folders[0].id;
   openModal(

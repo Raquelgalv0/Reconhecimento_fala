@@ -86,15 +86,22 @@ input, textarea, select {
 }
 .brand .dot { color: var(--accent); }
 
-.mode-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 18px; }
+.mode-badges {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 18px;
+  background: none; border: none; margin: 0; cursor: pointer; text-align: left; width: 100%;
+}
 .mode-badge {
+  display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px;
   padding: 3px 9px;
   border-radius: 999px;
   background: rgba(91, 63, 130, 0.32);
   color: #e2d5ee;
   border: 1px solid rgba(91, 63, 130, 0.5);
+  transition: background 0.15s, border-color 0.15s;
 }
+.mode-badges:hover .mode-badge { background: rgba(91, 63, 130, 0.5); border-color: rgba(91, 63, 130, 0.75); }
+.mode-badge--empty { color: var(--ink-faint, #a89fc0); }
 
 .nav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
 .nav-item {

@@ -173,13 +173,22 @@ export function renderUpload(container) {
     </div>
     ${
       folders.length === 0
-        ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na barra lateral primeiro.</div>`
+        ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Você ainda não tem nenhum assunto.<br/><button class="btn btn-primary" id="up-create-folder" style="margin-top:12px;">${Icon("plus", { size: 14 })}<span>Criar o primeiro assunto</span></button></div>`
         : renderForm(folders)
     }
     <div id="upload-result">${lastResult ? renderResultHtml(lastResult) : ""}</div>
   `;
 
-  if (folders.length === 0) return;
+  if (folders.length === 0) {
+    container.querySelector("#up-create-folder").addEventListener("click", () => {
+      const name = prompt("Como quer chamar o primeiro assunto?");
+      if (!name || !name.trim()) return;
+      store.addFolder(name.trim(), null);
+      showToast(`"${name.trim()}" criado.`, "folder");
+      renderUpload(container);
+    });
+    return;
+  }
   wireForm(container);
   if (lastResult) wireResult(container);
 }

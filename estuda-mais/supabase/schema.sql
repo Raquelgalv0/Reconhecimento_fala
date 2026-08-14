@@ -54,8 +54,10 @@ create table if not exists flashcards (
   hint text not null default '',
   summary_id text references summaries(id) on delete set null,
   created_at timestamptz not null default now(),
-  srs jsonb not null default '{}'::jsonb
+  srs jsonb not null default '{}'::jsonb,
+  tags jsonb not null default '[]'::jsonb
 );
+alter table flashcards add column if not exists tags jsonb not null default '[]'::jsonb;
 
 -- ---------- questions ----------
 create table if not exists questions (

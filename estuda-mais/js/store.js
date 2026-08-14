@@ -1,6 +1,7 @@
 import { newSrsState } from "./srs.js";
 import { showToast } from "./ui-utils.js";
 import * as db from "./db.js";
+import { MODE_TAG } from "./modes.js";
 
 function uid(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
@@ -426,7 +427,7 @@ class Store {
   }
 
   // ---- Flashcards ----
-  addFlashcard({ folderId, front, back, hint = "", summaryId = null }) {
+  addFlashcard({ folderId, front, back, hint = "", summaryId = null, tags = [] }) {
     const card = {
       id: uid("fc"),
       folderId,
@@ -434,6 +435,7 @@ class Store {
       back,
       hint,
       summaryId,
+      tags,
       createdAt: new Date().toISOString(),
       srs: newSrsState(),
     };
@@ -441,6 +443,33 @@ class Store {
     this.save();
     db.insertRow("flashcards", mapCard.toDb(card, this.userId), this.session).catch((err) => reportSyncError("salvar o flashcard", err));
     return card;
+  }
+  // Usado pela importação de .apkg (e qualquer outra fonte que precise
+  // criar muitos cards de uma vez) — um só save()/re-render local e o
+  // envio pro banco em lotes, em vez de uma chamada de rede por card.
+  // Cada item aceita os mesmos campos de addFlashcard, mais `srs` e
+  // `createdAt` opcionais (pra já nascer com estado/data histórica, no
+  // caso da importação reconstruir o histórico de revisão do Anki).
+  addFlashcardsBulk(cards) {
+    const withIds = cards.map((c) => ({
+      id: uid("fc"),
+      folderId: c.folderId,
+      front: c.front,
+      back: c.back,
+      hint: c.hint || "",
+      summaryId: c.summaryId || null,
+      tags: c.tags || [],
+      createdAt: c.createdAt || new Date().toISOString(),
+      srs: c.srs || newSrsState(),
+    }));
+    this.state.flashcards.push(...withIds);
+    this.save();
+    const BATCH = 300;
+    const rows = withIds.map((c) => mapCard.toDb(c, this.userId));
+    for (let i = 0; i < rows.length; i += BATCH) {
+      db.insertRows("flashcards", rows.slice(i, i + BATCH), this.session).catch((err) => reportSyncError("salvar os flashcards importados", err));
+    }
+    return withIds;
   }
   updateFlashcard(id, patch) {
     const c = this.state.flashcards.find((x) => x.id === id);
@@ -749,6 +778,16 @@ class Store {
           newFolders.push(folder);
         }
       });
+    // "Matérias" é opcional no onboarding — mas terminar sem nenhum assunto
+    // criado é um beco sem saída: Resumos, Flashcards, Questões e Upload
+    // dependem de ter pelo menos uma pasta pra salvar o material em. Garante
+    // um ponto de partida mesmo se a pessoa pular esse campo.
+    if (this.state.folders.length === 0) {
+      const fallbackName = profile.studyArea?.trim() || MODE_TAG[modes[0]] || "Meus estudos";
+      const folder = { id: uid("f"), name: fallbackName, parentId: null };
+      this.state.folders.push(folder);
+      newFolders.push(folder);
+    }
     this.state.onboarded = true;
     this.save();
 
@@ -782,6 +821,13 @@ class Store {
       this.session,
       "id"
     ).catch((err) => reportSyncError("salvar seu perfil", err));
+  }
+  // Troca as Alas ativas (Concurso/Vestibular/Graduação/Medicina) — usado
+  // pelas etiquetas clicáveis na sidebar, sem precisar refazer o onboarding.
+  setModes(modes) {
+    this.state.modes = modes;
+    this.save();
+    db.updateRow("profiles", this.userId, { modes }, this.session, "id").catch((err) => reportSyncError("salvar suas Alas", err));
   }
 
   // ---- Backup ----
