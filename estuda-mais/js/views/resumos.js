@@ -1,6 +1,7 @@
 import { store } from "../store.js";
 import { debounce, stripHtml, formatDate, showToast, openModal, closeModal } from "../ui-utils.js";
 import { generateSummaryFromText, suggestFlashcardFromSelection, generateQuestionsFromText } from "../ai.js";
+import { openAiChat } from "../ai-chat.js";
 import { Icon } from "../icons.js";
 
 export function renderResumos(container) {
@@ -304,13 +305,13 @@ function renderEditor(container, summaryId) {
       <div class="sep"></div>
       <div class="tb-group">
         <div class="tb-popover-wrap">
-          <button class="tb-popover-trigger" id="fc-trigger" title="Cor do texto"><b style="color:${FONT_COLORS[0].hex}">A</b></button>
+          <button class="tb-popover-trigger" id="fc-trigger" title="Cor do texto (Ctrl+Shift+L repete a última cor)"><b style="color:${FONT_COLORS[0].hex}">A</b></button>
           <div class="tb-popover" id="fc-popover">
             ${FONT_COLORS.map((c) => `<button data-fc="${c.hex}" class="fc-swatch" style="color:${c.hex}" title="Cor do texto: ${c.label}">A</button>`).join("")}
           </div>
         </div>
         <div class="tb-popover-wrap">
-          <button class="tb-popover-trigger" id="hl-trigger" title="Destacar">${Icon("highlighter", { size: 15 })}</button>
+          <button class="tb-popover-trigger" id="hl-trigger" title="Destacar (Ctrl+Shift+H repete a última cor)">${Icon("highlighter", { size: 15 })}</button>
           <div class="tb-popover" id="hl-popover">
             ${HIGHLIGHT_COLORS.map((c) => `<button data-hl="${c.hex}" class="hl-swatch ${c.cls}" title="Destacar (${c.label})"></button>`).join("")}
             <div class="tb-popover-sep"></div>
@@ -326,7 +327,7 @@ function renderEditor(container, summaryId) {
       <div class="sep"></div>
       <div class="tb-group">
         <button data-cmd="link" title="Adicionar link">${Icon("link", { size: 15 })}</button>
-        <button data-cmd="image" title="Adicionar imagem da galeria">${Icon("image", { size: 15 })}</button>
+        <button data-cmd="image" title="Adicionar imagem da galeria (Ctrl+Shift+K)">${Icon("image", { size: 15 })}</button>
         <div class="tb-popover-wrap">
           <button class="toolbar-font-btn tb-popover-trigger" id="insert-trigger" title="Inserir bloco">${Icon("plus", { size: 13 })}<span>Inserir</span></button>
           <div class="tb-popover tb-popover--menu" id="insert-popover">
@@ -345,6 +346,7 @@ function renderEditor(container, summaryId) {
       </div>
       <button class="ai-btn" id="ai-generate">${Icon("sparkles", { size: 14 })}<span>Gerar com IA</span></button>
       <button class="ai-btn" id="ai-questions">${Icon("helpCircle", { size: 14 })}<span>Transformar em questões</span></button>
+      <button class="ai-btn ai-btn-ghost" id="ai-doubt">${Icon("messageCircle", { size: 14 })}<span>Tirar dúvida com IA</span></button>
     </div>
     <input type="file" id="editor-image-input" accept="image/*" style="display:none" />
     <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"} ls--${summary.lineSpacing || "media"}" contenteditable="true" data-focus-guard
@@ -390,6 +392,9 @@ function renderEditor(container, summaryId) {
   // --- toolbar formatting ---
   const imageInput = container.querySelector("#editor-image-input");
   let savedRange = null;
+  // Guarda a última cor escolhida (nos popovers ou na barra flutuante de
+  // seleção), pra repetir com o atalho de teclado sem reabrir o menu.
+  const lastColors = { fc: FONT_COLORS[1].hex, hl: HIGHLIGHT_COLORS[0].hex };
 
   imageInput.addEventListener("change", () => {
     const file = imageInput.files[0];
@@ -444,6 +449,7 @@ function renderEditor(container, summaryId) {
     btn.addEventListener("mousedown", (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       editorBody.focus();
+      lastColors.fc = btn.dataset.fc;
       document.execCommand("foreColor", false, btn.dataset.fc);
       editorBody.dispatchEvent(new Event("input"));
     });
@@ -453,9 +459,39 @@ function renderEditor(container, summaryId) {
     btn.addEventListener("mousedown", (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       editorBody.focus();
+      lastColors.hl = btn.dataset.hl;
       applyHighlightColor(editorBody, btn.dataset.hl);
       editorBody.dispatchEvent(new Event("input"));
     });
+  });
+
+  // --- atalhos de teclado: repete a última cor/destaque usados, e abre o
+  // seletor de imagem, sem precisar abrir os menus da barra de ferramentas.
+  editorBody.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "h") {
+      e.preventDefault();
+      if (applyHighlightColor(editorBody, lastColors.hl)) {
+        editorBody.dispatchEvent(new Event("input"));
+      } else {
+        showToast("Selecione um trecho de texto para destacar.", "highlighter");
+      }
+    } else if (key === "l") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        showToast("Selecione um trecho de texto para colorir.", "alertCircle");
+        return;
+      }
+      document.execCommand("foreColor", false, lastColors.fc);
+      editorBody.dispatchEvent(new Event("input"));
+    } else if (key === "k") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+      imageInput.click();
+    }
   });
   const eraseBtn = container.querySelector("[data-hl-erase]");
   let eraserMode = false;
@@ -518,6 +554,10 @@ function renderEditor(container, summaryId) {
 
   container.querySelector("#ai-generate").addEventListener("click", () => openAiGenerateModal(summaryId, editorBody));
   container.querySelector("#ai-questions").addEventListener("click", () => openGenerateQuestionsModal(summaryId, editorBody));
+  container.querySelector("#ai-doubt").addEventListener("click", () => {
+    const text = stripHtml(editorBody.innerHTML).trim();
+    openAiChat(text ? { text: text.slice(0, 6000), label: summary.title || "Sem título" } : null);
+  });
   container.querySelector("#page-style-btn").addEventListener("click", () => openPageStyleModal(summaryId, summary.pageStyle || "minimal"));
   container.querySelector("#font-style-btn").addEventListener("click", () => openFontModal(summaryId, summary.fontFamily || "padrao"));
   container.querySelector("#line-spacing-btn").addEventListener("click", () => openLineSpacingModal(summaryId, summary.lineSpacing || "media"));
@@ -607,7 +647,7 @@ function renderEditor(container, summaryId) {
   });
 
   // --- selection -> floating toolbar ---
-  setupSelectionToolbar(editorBody, summary);
+  setupSelectionToolbar(editorBody, summary, lastColors);
 }
 
 // Aplica cor de destaque com o comando nativo do navegador (hiliteColor) em
@@ -730,7 +770,7 @@ function unwrapHighlight(root) {
   return true;
 }
 
-function setupSelectionToolbar(editorBody, summary) {
+function setupSelectionToolbar(editorBody, summary, lastColors) {
   let bar = document.getElementById("selection-toolbar");
   if (!bar) {
     bar = document.createElement("div");
@@ -777,6 +817,7 @@ function setupSelectionToolbar(editorBody, summary) {
 
   selFcBtns.forEach((b) => {
     b.onclick = () => {
+      if (lastColors) lastColors.fc = b.dataset.fc;
       document.execCommand("foreColor", false, b.dataset.fc);
       editorBody.dispatchEvent(new Event("input"));
       hide();
@@ -785,6 +826,7 @@ function setupSelectionToolbar(editorBody, summary) {
 
   selHlBtns.forEach((b) => {
     b.onclick = () => {
+      if (lastColors) lastColors.hl = b.dataset.hl;
       applyHighlightColor(editorBody, b.dataset.hl);
       editorBody.dispatchEvent(new Event("input"));
       hide();

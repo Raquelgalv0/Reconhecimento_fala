@@ -60,6 +60,19 @@ export function buildPrompt(task, params) {
         user: `Material:\n"""${text}"""\n\nGere exatamente ${count} questões distintas. ${styleInstruction} ${difficultyInstruction} Indique em cada questão o campo "difficulty" com o valor "facil", "medio" ou "dificil" (nunca "misto" — esse valor é só uma instrução de variedade, não uma resposta válida).\nResponda em JSON: {"questions": [{"statement": "...", "alternatives": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}], "correctId": "A", "difficulty": "facil"}]}`,
       };
     }
+    case "chat": {
+      const { messages, contextText } = params;
+      const contextBlock = contextText
+        ? `A pessoa está estudando o seguinte material agora — use como contexto quando a pergunta se referir a ele:\n"""${contextText}"""\n\n`
+        : "";
+      const history = (messages || [])
+        .map((m) => `${m.role === "user" ? "Estudante" : "Você"}: ${m.content}`)
+        .join("\n");
+      return {
+        system: `Você é um tutor de estudos, tirando dúvidas rápidas de um estudante brasileiro dentro de um app de resumos. Responda de forma direta, didática e curta (poucos parágrafos ou uma lista, sem enrolação). Pode usar **negrito** e listas com "-" em markdown simples. ${common}`,
+        user: `${contextBlock}Conversa até agora:\n${history}\n\nResponda à última mensagem do estudante.\nResponda em JSON: {"reply": "sua resposta em markdown simples"}`,
+      };
+    }
     case "mindmap": {
       const { text, title } = params;
       return {

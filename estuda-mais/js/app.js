@@ -11,6 +11,7 @@ import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
 import { mountSpotifyPlayer } from "./spotify-player.js";
+import { mountAiChat } from "./ai-chat.js";
 import { MODES, MODE_TAG } from "./modes.js";
 
 const appRoot = document.getElementById("app");
@@ -264,9 +265,11 @@ function renderShell() {
       </div>
       <main class="main" id="main"></main>
       <div id="spotify-mini-root" hidden></div>
+      <div id="ai-chat-root"></div>
     </div>`;
 
   mountSpotifyPlayer(appRoot.querySelector("#spotify-mini-root"));
+  mountAiChat(appRoot.querySelector("#ai-chat-root"));
 
   const sidebarEl = appRoot.querySelector("#sidebar");
   const mainEl = appRoot.querySelector("#main");
