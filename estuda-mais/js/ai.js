@@ -80,7 +80,8 @@ export async function askAiTutor(messages, contextText) {
   return reply;
 }
 
-// Gera uma estrutura simples de mapa mental (tópico central + ramos).
+// Gera um mapa mental hierárquico: tópico central -> ramos -> sub-ramos
+// (cada branch é { label, children: Branch[] }, children pode vir vazio).
 export async function generateMindMapFromText(text, title) {
   const { title: mapTitle, branches } = await callAi("mindmap", { text, title });
   return { title: mapTitle, branches };
