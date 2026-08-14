@@ -286,6 +286,7 @@ function renderForm(folders) {
       <div class="field">
         <label>Cole o texto do material</label>
         <textarea id="up-source" style="min-height:180px" placeholder="Cole aqui o conteúdo da aula, do PDF ou dos slides..."></textarea>
+        <div class="field-hint" id="up-length-hint"></div>
       </div>
       <div class="field">
         <label>Assunto</label>
@@ -357,9 +358,37 @@ function renderResultHtml(r) {
   `;
 }
 
+// Conta gratuita da Groq tem limite de 12.000 tokens/minuto por pedido — um
+// documento inteiro (ex.: dissertação) estoura isso fácil. ~4 caracteres por
+// token é uma estimativa conservadora; fica abaixo do limite real pra sobrar
+// espaço pro resto do prompt (instruções, formato de resposta etc.).
+const MAX_SAFE_TOKENS = 9000;
+const MAX_SAFE_CHARS = MAX_SAFE_TOKENS * 4;
+
 function wireForm(container) {
   const fileInput = container.querySelector("#up-file");
   const sourceEl = container.querySelector("#up-source");
+  const lengthHint = container.querySelector("#up-length-hint");
+
+  const updateLengthHint = () => {
+    if (!lengthHint) return;
+    const len = sourceEl.value.trim().length;
+    if (len === 0) {
+      lengthHint.textContent = "";
+      lengthHint.classList.remove("field-hint--warning");
+      return;
+    }
+    const estimatedTokens = Math.ceil(len / 4);
+    if (estimatedTokens > MAX_SAFE_TOKENS) {
+      lengthHint.textContent = `Material longo demais pra IA processar de uma vez (~${estimatedTokens.toLocaleString("pt-BR")} tokens, limite ~${MAX_SAFE_TOKENS.toLocaleString("pt-BR")}). Envie por partes de até ~${MAX_SAFE_CHARS.toLocaleString("pt-BR")} caracteres.`;
+      lengthHint.classList.add("field-hint--warning");
+    } else {
+      lengthHint.textContent = `${len.toLocaleString("pt-BR")} caracteres (~${estimatedTokens.toLocaleString("pt-BR")} tokens).`;
+      lengthHint.classList.remove("field-hint--warning");
+    }
+  };
+  sourceEl.addEventListener("input", updateLengthHint);
+  updateLengthHint();
 
   // Fluxo comum pra qualquer formato que a gente extrai texto de verdade
   // (PDF, PPTX): valida tamanho, limpa a caixa, chama o extrator escolhido
@@ -379,6 +408,7 @@ function wireForm(container) {
         return;
       }
       sourceEl.value = text;
+      updateLengthHint();
       const unit = totalPages === 1 ? unitSingular : unitPlural;
       if (failedPages > 0) {
         showToast(
@@ -417,6 +447,7 @@ function wireForm(container) {
     const reader = new FileReader();
     reader.onload = () => {
       sourceEl.value = String(reader.result || "");
+      updateLengthHint();
       showToast(`Arquivo "${file.name}" carregado.`, "upload");
     };
     reader.onerror = () => showToast("Não foi possível ler esse arquivo.", "alertCircle");
@@ -450,6 +481,17 @@ function wireForm(container) {
     const text = sourceEl.value.trim();
     if (text.length < 40) {
       showToast("Cole um texto mais completo (mínimo de 40 caracteres).", "alertCircle");
+      return;
+    }
+    // Mesmo limite/aviso do contador ao vivo (updateLengthHint) — checado de
+    // novo aqui pra garantir que não dá pra clicar "Processar" ignorando o
+    // aviso (ex.: colando um texto grande e clicando antes do input disparar).
+    const estimatedTokens = Math.ceil(text.length / 4);
+    if (estimatedTokens > MAX_SAFE_TOKENS) {
+      showToast(
+        `Esse material é grande demais pra IA processar de uma vez (~${estimatedTokens.toLocaleString("pt-BR")} tokens, o limite é ~${MAX_SAFE_TOKENS.toLocaleString("pt-BR")}). Envie por partes — até ~${MAX_SAFE_CHARS.toLocaleString("pt-BR")} caracteres de cada vez (um capítulo ou seção).`,
+        "alertCircle"
+      );
       return;
     }
     const title = container.querySelector("#up-title").value.trim() || "Material importado";
