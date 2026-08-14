@@ -133,24 +133,21 @@ const TIME_OPTIONS = [
   { value: 180, label: "3h+/dia" },
 ];
 
+// Onboarding de uma etapa só: escolher a(s) Ala(s) e pronto. Nome, área de
+// estudo, nível e tempo disponível ficam pro modal de "Editar perfil" (ou
+// pras etiquetas de Ala na sidebar), preenchidos com calma depois — em vez
+// de pedir tudo de uma vez antes da pessoa nem ter visto o app.
 function renderOnboarding() {
   const selectedModes = new Set();
-  let step = 1;
 
   function render() {
-    if (step === 1) renderStep1();
-    else renderStep2();
-  }
-
-  function renderStep1() {
     appRoot.innerHTML = `
       <div class="onboarding-overlay">
         <div class="onboarding-card">
-          <div class="onboarding-step">Etapa 1 de 2</div>
           <h1>Bem-vinda ao HiperNotes</h1>
           <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso, sem precisar de apps diferentes.</p>
           <div id="mode-list"></div>
-          <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Continuar</button>
+          <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Começar</button>
         </div>
       </div>`;
 
@@ -173,79 +170,7 @@ function renderOnboarding() {
 
     continueBtn.addEventListener("click", () => {
       if (selectedModes.size === 0) return;
-      step = 2;
-      render();
-    });
-  }
-
-  function renderStep2() {
-    appRoot.innerHTML = `
-      <div class="onboarding-overlay">
-        <div class="onboarding-card">
-          <div class="onboarding-step">Etapa 2 de 2</div>
-          <h1>Conte um pouco sobre você</h1>
-          <p>Isso ajuda a personalizar seu painel e suas metas (pode pular e preencher depois).</p>
-          <div class="field">
-            <label>Nome</label>
-            <input type="text" id="ob-name" placeholder="Como podemos te chamar?" />
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Área de estudo</label><input type="text" id="ob-area" placeholder="Ex.: Medicina, Direito..." /></div>
-            <div class="field">
-              <label>Nível de conhecimento</label>
-              <select id="ob-level">
-                <option value="iniciante">Iniciante</option>
-                <option value="intermediario" selected>Intermediário</option>
-                <option value="avancado">Avançado</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label>Tempo disponível por dia</label>
-            <div class="btn-row" id="ob-time-options">
-              ${TIME_OPTIONS.map((t, i) => `<button type="button" class="btn btn-sm ${i === 1 ? "btn-primary" : "btn-ghost"}" data-time="${t.value}">${t.label}</button>`).join("")}
-            </div>
-          </div>
-          <div class="field">
-            <label>Matérias (separe por vírgula)</label>
-            <input type="text" id="ob-materias" placeholder="Ex.: Direito Constitucional, Farmacologia, Anatomia" />
-            <div class="field-hint">Criamos uma pasta para cada uma automaticamente.</div>
-          </div>
-          <div class="btn-row" style="justify-content:space-between; margin-top:6px;">
-            <button class="btn btn-ghost" id="back">← Voltar</button>
-            <button class="btn btn-primary" id="finish">Concluir</button>
-          </div>
-        </div>
-      </div>`;
-
-    let dailyTimeMinutes = 60;
-    appRoot.querySelectorAll("[data-time]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        dailyTimeMinutes = Number(btn.dataset.time);
-        appRoot.querySelectorAll("[data-time]").forEach((b) => {
-          b.classList.remove("btn-primary");
-          b.classList.add("btn-ghost");
-        });
-        btn.classList.remove("btn-ghost");
-        btn.classList.add("btn-primary");
-      });
-    });
-
-    appRoot.querySelector("#back").addEventListener("click", () => {
-      step = 1;
-      render();
-    });
-
-    appRoot.querySelector("#finish").addEventListener("click", () => {
-      const profile = {
-        name: appRoot.querySelector("#ob-name").value.trim(),
-        studyArea: appRoot.querySelector("#ob-area").value.trim(),
-        level: appRoot.querySelector("#ob-level").value,
-        dailyTimeMinutes,
-      };
-      const materias = appRoot.querySelector("#ob-materias").value.trim();
-      store.completeOnboarding({ modes: [...selectedModes], profile, materias });
-      if (dailyTimeMinutes) store.setDailyGoal(Math.max(3, Math.round(dailyTimeMinutes / 10)));
+      store.completeOnboarding({ modes: [...selectedModes], profile: {}, materias: "" });
       renderShell();
     });
   }
