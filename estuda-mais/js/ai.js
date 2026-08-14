@@ -64,12 +64,29 @@ export async function generateChecklistFromText(text, count = 8) {
   return items;
 }
 
+// Modelos de IA têm viés de posição ao gerar múltipla escolha (tendem a
+// colocar a resposta certa sempre na mesma letra — normalmente B). Sem isso,
+// dava pra "colar" só chutando sempre a mesma letra. Embaralha as alternativas
+// de cada questão depois de gerar, mantendo o texto de cada uma intacto.
+function shuffleQuestionAlternatives(q) {
+  const letters = q.alternatives.map((a) => a.id);
+  const correctText = q.alternatives.find((a) => a.id === q.correctId)?.text;
+  const texts = q.alternatives.map((a) => a.text);
+  for (let i = texts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [texts[i], texts[j]] = [texts[j], texts[i]];
+  }
+  const alternatives = letters.map((id, i) => ({ id, text: texts[i] }));
+  const correctId = alternatives.find((a) => a.text === correctText)?.id || q.correctId;
+  return { ...q, alternatives, correctId };
+}
+
 // Gera até `count` questões de múltipla escolha a partir de um material.
 // style: "conceitual" (padrão), "clinico" ou "misto" (mistura os dois, Modo Medicina).
 // difficulty: "facil" | "medio" (padrão) | "dificil" | "misto" (mistura as três).
 export async function generateQuestionsFromText(text, count = 3, style = "conceitual", difficulty = "medio") {
   const { questions } = await callAi("questions", { text, count, style, difficulty });
-  return questions;
+  return questions.map(shuffleQuestionAlternatives);
 }
 
 // Tira dúvidas em formato de chat — separado do "Gerar com IA" (que produz
