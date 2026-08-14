@@ -86,15 +86,22 @@ input, textarea, select {
 }
 .brand .dot { color: var(--accent); }
 
-.mode-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 18px; }
+.mode-badges {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 18px;
+  background: none; border: none; margin: 0; cursor: pointer; text-align: left; width: 100%;
+}
 .mode-badge {
+  display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px;
   padding: 3px 9px;
   border-radius: 999px;
   background: rgba(91, 63, 130, 0.32);
   color: #e2d5ee;
   border: 1px solid rgba(91, 63, 130, 0.5);
+  transition: background 0.15s, border-color 0.15s;
 }
+.mode-badges:hover .mode-badge { background: rgba(91, 63, 130, 0.5); border-color: rgba(91, 63, 130, 0.75); }
+.mode-badge--empty { color: var(--ink-faint, #a89fc0); }
 
 .nav { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
 .nav-item {
@@ -153,6 +160,11 @@ input, textarea, select {
 .folder-row:hover { background: var(--bg-sidebar-hover); cursor: pointer; }
 .folder-row.active { background: var(--bg-sidebar-hover); color: #fff; font-weight: 600; }
 .folder-row.sub { padding-left: 26px; font-size: 13px; color: #a494ac; }
+.folder-mode-tag {
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  background: rgba(255,255,255,0.1); color: #cfc4d6; border-radius: 999px; padding: 2px 7px; flex-shrink: 0;
+}
+.folder-row.active .folder-mode-tag { background: rgba(255,255,255,0.18); color: #fff; }
 .folder-row .count { margin-left: auto; font-size: 11px; color: #948a9c; }
 .folder-row.active .count { color: #bcb2c2; }
 .folder-row.drop-target { background: var(--accent); color: #fff; outline: 2px dashed rgba(255, 255, 255, 0.6); outline-offset: -2px; }
@@ -187,6 +199,12 @@ input, textarea, select {
 }
 .main-header h1 { font-size: 26px; margin: 0 0 4px; }
 .main-header p.sub { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
+
+.medicina-banner {
+  display: flex; align-items: center; gap: 9px; background: #e3f4f4; color: #1f7f84;
+  border: 1px solid #bfe3e3; border-radius: 12px; padding: 11px 16px; font-size: 13.5px; font-weight: 600;
+  margin-bottom: 22px;
+}
 
 .btn {
   display: inline-flex;
@@ -503,6 +521,7 @@ input, textarea, select {
 /* ---------- Resumos ---------- */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .summary-card {
+  position: relative;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -511,6 +530,13 @@ input, textarea, select {
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .summary-card:hover { box-shadow: var(--shadow-2); border-color: #d6d1f5; }
+.summary-card-delete {
+  position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; color: var(--ink-faint);
+  background: var(--bg-elevated); border: 1px solid transparent; opacity: 0; transition: opacity 0.12s ease;
+}
+.summary-card:hover .summary-card-delete { opacity: 1; }
+.summary-card-delete:hover { background: var(--red-soft); color: var(--red); border-color: var(--red-soft); }
 .summary-card h4 { font-family: var(--font-serif); font-size: 15.5px; margin: 0 0 6px; }
 .summary-card .excerpt { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; max-height: 54px; overflow: hidden; }
 .summary-card .meta { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 11.5px; color: var(--ink-faint); flex-wrap: wrap; }
@@ -561,6 +587,10 @@ input, textarea, select {
   margin-left: auto; width: auto; padding: 0 12px; gap: 6px; color: var(--accent);
   background: var(--accent-soft); font-weight: 600; font-size: 12.5px; white-space: nowrap;
 }
+.editor-toolbar .ai-btn.ai-btn-ghost {
+  margin-left: 0; color: var(--ink-soft); background: var(--bg-elevated); border: 1px solid var(--border);
+}
+.editor-toolbar .ai-btn.ai-btn-ghost:hover { color: var(--accent); border-color: var(--accent); }
 .editor-toolbar .toolbar-font-btn {
   width: auto; padding: 0 10px; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-soft); white-space: nowrap;
 }
@@ -759,6 +789,11 @@ mark.hl-azul { background: #c7dcf7; }
 .font--moderna { font-family: "Manrope", var(--font-sans); }
 .font--moderna h2, .font--moderna h3 { font-family: "Manrope", var(--font-sans); font-weight: 700; letter-spacing: -0.01em; }
 
+/* --- Espaçamento entre linhas (por resumo) --- */
+.ls--simples { line-height: 1.3; }
+.ls--media { line-height: 1.85; }
+.ls--duplo { line-height: 2.4; }
+
 .font-option-list { display: flex; flex-direction: column; gap: 8px; }
 .font-option {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -857,6 +892,37 @@ mark.hl-azul { background: #c7dcf7; }
 .deck-card .due-pill { background: var(--amber-soft); color: var(--amber); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 .deck-card .due-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--green); }
 
+/* ---------- Assuntos ---------- */
+.assuntos-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: -6px 0 18px; font-size: 13px; }
+.assuntos-breadcrumb .crumb { color: var(--ink-soft); padding: 3px 6px; border-radius: 6px; }
+.assuntos-breadcrumb .crumb:hover { background: var(--accent-soft); color: var(--accent); }
+.assuntos-breadcrumb .crumb.active { color: var(--ink); font-weight: 700; }
+.assuntos-breadcrumb .crumb-sep { color: var(--ink-faint); }
+
+.assunto-detail-panel { margin-bottom: 18px; }
+.assunto-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.assunto-detail-head h3 { margin: 0; }
+.assunto-shortcut-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.assuntos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.assunto-card {
+  position: relative;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 15px 16px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.assunto-card:hover { box-shadow: var(--shadow-2); border-color: #d6d1f5; }
+.assunto-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.assunto-card-icon { color: var(--accent); }
+.assunto-card h4 { font-family: var(--font-serif); font-size: 15px; margin: 0 0 6px; }
+.assunto-card-meta { font-size: 11.5px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assunto-card-actions { display: flex; align-items: center; gap: 2px; margin-top: 10px; opacity: 0; transition: opacity 0.12s ease; }
+.assunto-card:hover .assunto-card-actions { opacity: 1; }
+.folder-mode-tag.light { background: var(--accent-soft); color: var(--accent); }
+
 .flash-list { display: flex; flex-direction: column; gap: 8px; }
 .flash-row {
   display: flex; align-items: center; gap: 12px;
@@ -906,14 +972,23 @@ mark.hl-azul { background: #c7dcf7; }
 }
 
 .review-actions { display: flex; gap: 12px; margin-top: 26px; }
-.review-actions button {
-  padding: 12px 26px; border-radius: 12px; font-weight: 700; font-size: 14px;
-  display: flex; align-items: center; gap: 8px;
+
+/* 4 notas (Errei/Difícil/Bom/Fácil), no espírito do Anki — cada botão mostra
+   o intervalo que o FSRS agendaria se essa nota for escolhida. */
+.review-actions--fsrs { gap: 10px; }
+.grade-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 13.5px; min-width: 76px;
 }
-.btn-erro { background: var(--red-soft); color: var(--red); }
-.btn-erro:hover { background: #f6d3d9; }
-.btn-acerto { background: var(--green-soft); color: var(--green); }
-.btn-acerto:hover { background: #cdefdd; }
+.grade-btn .grade-interval { font-size: 11px; font-weight: 600; opacity: 0.75; }
+.grade-btn--again { background: var(--red-soft); color: var(--red); }
+.grade-btn--again:hover { background: #f6d3d9; }
+.grade-btn--hard { background: var(--amber-soft); color: var(--amber); }
+.grade-btn--hard:hover { background: #f5e2c2; }
+.grade-btn--good { background: var(--accent-soft); color: var(--accent); }
+.grade-btn--good:hover { background: #e2d9f5; }
+.grade-btn--easy { background: var(--green-soft); color: var(--green); }
+.grade-btn--easy:hover { background: #cdefdd; }
 
 .empty-review {
   text-align: center; padding: 60px 20px; color: var(--ink-soft);
@@ -927,6 +1002,12 @@ mark.hl-azul { background: #c7dcf7; }
 
 .spotify-block { width: 100%; margin-bottom: 16px; }
 .spotify-block--empty { display: flex; justify-content: center; }
+.spotify-block--connected {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 12px; font-size: 12.5px; color: var(--ink-soft);
+}
+.spotify-block--connected > span { display: flex; align-items: center; gap: 6px; }
 .spotify-embed-slot { border-radius: 12px; overflow: hidden; line-height: 0; }
 .spotify-embed-slot iframe { display: block; width: 100%; border: none; }
 .spotify-block-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 6px; }
@@ -935,6 +1016,78 @@ mark.hl-azul { background: #c7dcf7; }
   font-size: 11.5px; font-weight: 600; color: var(--ink-soft); text-decoration: none;
 }
 .spotify-open-link:hover { color: var(--accent); }
+
+/* Player fixo — vive fora da área que troca de tela, então a música não
+   para quando a pessoa navega pra outro lugar do app. */
+#spotify-mini-root { position: fixed; right: 18px; bottom: 18px; z-index: 260; width: 260px; max-width: calc(100vw - 36px); }
+.spotify-mini-bar {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow-2); overflow: hidden;
+}
+.spotify-mini-toggle {
+  display: flex; align-items: center; gap: 7px; width: 100%; padding: 10px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink); background: none; border: none; cursor: pointer;
+}
+.spotify-mini-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+.spotify-mini-body { padding: 0 10px 10px; }
+
+/* Chat de dúvidas com IA — mesmo espírito do player do Spotify: fica fora
+   da área que o roteador troca, então a conversa sobrevive a navegar entre
+   telas. Canto oposto ao player pra nunca sobrepor um no outro. */
+#ai-chat-root { position: fixed; left: 18px; bottom: 18px; z-index: 260; width: 320px; max-width: calc(100vw - 36px); }
+.ai-chat-bar {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow-2); overflow: hidden;
+}
+.ai-chat-toggle {
+  display: flex; align-items: center; gap: 7px; width: 100%; padding: 10px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink); background: none; border: none; cursor: pointer;
+}
+.ai-chat-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+.ai-chat-body { display: flex; flex-direction: column; padding: 0 10px 10px; }
+.ai-chat-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 2px 8px; font-size: 12px; font-weight: 700; color: var(--ink-soft);
+}
+.ai-chat-head > span { display: flex; align-items: center; gap: 6px; }
+.ai-chat-context {
+  display: flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent);
+  font-size: 11px; font-weight: 600; padding: 5px 8px; border-radius: 8px; margin-bottom: 8px;
+}
+.ai-chat-context span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-chat-context button { background: none; border: none; color: inherit; cursor: pointer; display: flex; opacity: 0.7; }
+.ai-chat-context button:hover { opacity: 1; }
+.ai-chat-messages {
+  display: flex; flex-direction: column; gap: 8px; max-height: 300px; min-height: 80px;
+  overflow-y: auto; padding: 2px; margin-bottom: 8px;
+}
+.ai-chat-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  color: var(--ink-faint); font-size: 12px; padding: 20px 10px;
+}
+.ai-chat-msg { font-size: 12.5px; line-height: 1.5; padding: 8px 10px; border-radius: 10px; max-width: 88%; }
+.ai-chat-msg p { margin: 0 0 6px; }
+.ai-chat-msg p:last-child { margin-bottom: 0; }
+.ai-chat-msg ul { margin: 4px 0; padding-left: 18px; }
+.ai-chat-msg--user { align-self: flex-end; background: var(--accent); color: #fff; }
+.ai-chat-msg--assistant { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); color: var(--ink); }
+.ai-chat-typing { display: flex; gap: 4px; align-items: center; padding: 10px; }
+.ai-chat-typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-faint); animation: ai-chat-blink 1.2s infinite; }
+.ai-chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ai-chat-blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.ai-chat-input-row { display: flex; gap: 6px; align-items: flex-end; }
+.ai-chat-input-row textarea {
+  flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+  font-size: 12.5px; font-family: inherit; outline: none; background: var(--bg); color: var(--ink); max-height: 90px;
+}
+.ai-chat-input-row textarea:focus { border-color: var(--accent); }
+.ai-chat-input-row button {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center;
+}
+.ai-chat-input-row button:hover { background: var(--accent-hover); }
+.ai-chat-input-row button:disabled { opacity: 0.6; cursor: default; }
 .focus-setup-field { text-align: left; }
 .focus-setup-field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 8px; }
 .focus-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -973,6 +1126,12 @@ mark.hl-azul { background: #c7dcf7; }
 
 .focus-progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
 .focus-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--amber)); border-radius: 999px; transition: width 0.25s linear; }
+
+.focus-phrase {
+  display: flex; align-items: center; gap: 7px; justify-content: center; text-align: left;
+  background: var(--accent-soft); color: #4b3fa0; font-size: 12.5px; font-weight: 600;
+  border-radius: 10px; padding: 9px 12px; margin-top: 4px;
+}
 
 .focus-done { padding: 10px 0; }
 .focus-done-house { position: relative; display: flex; justify-content: center; margin-bottom: 10px; }
@@ -1171,7 +1330,8 @@ mark.hl-azul { background: #c7dcf7; }
   .sidebar, .mobile-menu-btn, .sidebar-backdrop, .notif-wrap,
   .btn-row, .folder-picker-inline,
   .editor-toolbar,
-  .selection-toolbar, .toast, .modal-overlay { display: none !important; }
+  .selection-toolbar, .toast, .modal-overlay,
+  #spotify-mini-root, #ai-chat-root { display: none !important; }
   .main { padding: 0 !important; overflow: visible !important; height: auto !important; }
   .title-input {
     border: none !important; padding: 0 0 10px !important; margin-bottom: 6px !important;

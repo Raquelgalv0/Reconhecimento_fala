@@ -6,15 +6,13 @@ import { renderQuestoes } from "./views/questoes.js";
 import { renderDesempenho } from "./views/desempenho.js";
 import { renderUpload } from "./views/upload.js";
 import { renderFoco } from "./views/foco.js";
+import { renderAssuntos } from "./views/assuntos.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
 import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
-
-const MODES = [
-  { id: "concurso", icon: "barChart", title: "Concurso público", desc: "Banco de questões, cadernos por assunto e revisão de erros." },
-  { id: "vestibular", icon: "graduationCap", title: "Vestibular", desc: "Resumo por tópico, flashcards essenciais e metas de conteúdo." },
-  { id: "graduacao", icon: "landmark", title: "Graduação", desc: "Organização por disciplina, datas de provas e revisão para retenção." },
-];
+import { mountSpotifyPlayer } from "./spotify-player.js";
+import { mountAiChat } from "./ai-chat.js";
+import { MODES, MODE_TAG } from "./modes.js";
 
 const appRoot = document.getElementById("app");
 
@@ -135,24 +133,21 @@ const TIME_OPTIONS = [
   { value: 180, label: "3h+/dia" },
 ];
 
+// Onboarding de uma etapa só: escolher a(s) Ala(s) e pronto. Nome, área de
+// estudo, nível e tempo disponível ficam pro modal de "Editar perfil" (ou
+// pras etiquetas de Ala na sidebar), preenchidos com calma depois — em vez
+// de pedir tudo de uma vez antes da pessoa nem ter visto o app.
 function renderOnboarding() {
   const selectedModes = new Set();
-  let step = 1;
 
   function render() {
-    if (step === 1) renderStep1();
-    else renderStep2();
-  }
-
-  function renderStep1() {
     appRoot.innerHTML = `
       <div class="onboarding-overlay">
         <div class="onboarding-card">
-          <div class="onboarding-step">Etapa 1 de 2</div>
           <h1>Bem-vinda ao HiperNotes</h1>
           <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso, sem precisar de apps diferentes.</p>
           <div id="mode-list"></div>
-          <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Continuar</button>
+          <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Começar</button>
         </div>
       </div>`;
 
@@ -175,79 +170,7 @@ function renderOnboarding() {
 
     continueBtn.addEventListener("click", () => {
       if (selectedModes.size === 0) return;
-      step = 2;
-      render();
-    });
-  }
-
-  function renderStep2() {
-    appRoot.innerHTML = `
-      <div class="onboarding-overlay">
-        <div class="onboarding-card">
-          <div class="onboarding-step">Etapa 2 de 2</div>
-          <h1>Conte um pouco sobre você</h1>
-          <p>Isso ajuda a personalizar seu painel e suas metas (pode pular e preencher depois).</p>
-          <div class="field">
-            <label>Nome</label>
-            <input type="text" id="ob-name" placeholder="Como podemos te chamar?" />
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Área de estudo</label><input type="text" id="ob-area" placeholder="Ex.: Medicina, Direito..." /></div>
-            <div class="field">
-              <label>Nível de conhecimento</label>
-              <select id="ob-level">
-                <option value="iniciante">Iniciante</option>
-                <option value="intermediario" selected>Intermediário</option>
-                <option value="avancado">Avançado</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label>Tempo disponível por dia</label>
-            <div class="btn-row" id="ob-time-options">
-              ${TIME_OPTIONS.map((t, i) => `<button type="button" class="btn btn-sm ${i === 1 ? "btn-primary" : "btn-ghost"}" data-time="${t.value}">${t.label}</button>`).join("")}
-            </div>
-          </div>
-          <div class="field">
-            <label>Matérias (separe por vírgula)</label>
-            <input type="text" id="ob-materias" placeholder="Ex.: Direito Constitucional, Farmacologia, Anatomia" />
-            <div class="field-hint">Criamos uma pasta para cada uma automaticamente.</div>
-          </div>
-          <div class="btn-row" style="justify-content:space-between; margin-top:6px;">
-            <button class="btn btn-ghost" id="back">← Voltar</button>
-            <button class="btn btn-primary" id="finish">Concluir</button>
-          </div>
-        </div>
-      </div>`;
-
-    let dailyTimeMinutes = 60;
-    appRoot.querySelectorAll("[data-time]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        dailyTimeMinutes = Number(btn.dataset.time);
-        appRoot.querySelectorAll("[data-time]").forEach((b) => {
-          b.classList.remove("btn-primary");
-          b.classList.add("btn-ghost");
-        });
-        btn.classList.remove("btn-ghost");
-        btn.classList.add("btn-primary");
-      });
-    });
-
-    appRoot.querySelector("#back").addEventListener("click", () => {
-      step = 1;
-      render();
-    });
-
-    appRoot.querySelector("#finish").addEventListener("click", () => {
-      const profile = {
-        name: appRoot.querySelector("#ob-name").value.trim(),
-        studyArea: appRoot.querySelector("#ob-area").value.trim(),
-        level: appRoot.querySelector("#ob-level").value,
-        dailyTimeMinutes,
-      };
-      const materias = appRoot.querySelector("#ob-materias").value.trim();
-      store.completeOnboarding({ modes: [...selectedModes], profile, materias });
-      if (dailyTimeMinutes) store.setDailyGoal(Math.max(3, Math.round(dailyTimeMinutes / 10)));
+      store.completeOnboarding({ modes: [...selectedModes], profile: {}, materias: "" });
       renderShell();
     });
   }
@@ -266,7 +189,12 @@ function renderShell() {
         <div class="notif-dropdown" id="notif-dropdown" hidden></div>
       </div>
       <main class="main" id="main"></main>
+      <div id="spotify-mini-root" hidden></div>
+      <div id="ai-chat-root"></div>
     </div>`;
+
+  mountSpotifyPlayer(appRoot.querySelector("#spotify-mini-root"));
+  mountAiChat(appRoot.querySelector("#ai-chat-root"));
 
   const sidebarEl = appRoot.querySelector("#sidebar");
   const mainEl = appRoot.querySelector("#main");
@@ -363,45 +291,29 @@ function renderMain(mainEl) {
   if (route === "desempenho") return renderDesempenho(mainEl);
   if (route === "upload") return renderUpload(mainEl);
   if (route === "foco") return renderFoco(mainEl);
+  if (route === "assuntos") return renderAssuntos(mainEl);
   return renderDashboard(mainEl);
 }
-
-const MODE_TAG = { concurso: "Concurso", vestibular: "Vestibular", graduacao: "Graduação" };
 
 function renderSidebar(sidebarEl) {
   const { route } = store.state.ui;
   const dueToday = store.cardsDueToday().length;
-  const folders = store.flattenFolders();
 
   sidebarEl.innerHTML = `
     <div class="brand"><span class="dot">●</span> HiperNotes</div>
-    <div class="mode-badges">${(store.state.modes || []).map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`).join("")}</div>
+    <button class="mode-badges" id="mode-badges-btn" title="Trocar de Ala (Concurso, Vestibular, Graduação, Medicina...)">${(store.state.modes || [])
+      .map((m) => `<span class="mode-badge">${MODE_TAG[m]}</span>`)
+      .join("") || `<span class="mode-badge mode-badge--empty">${Icon("plus", { size: 10 })}<span>Escolher Ala</span></span>`}</button>
 
     <div class="nav">
       <button class="nav-item ${route === "dashboard" ? "active" : ""}" data-nav="dashboard">${Icon("home")}<span>Painel</span></button>
       <button class="nav-item ${route === "resumos" ? "active" : ""}" data-nav="resumos">${Icon("fileText")}<span>Resumos</span></button>
       <button class="nav-item ${route === "flashcards" ? "active" : ""}" data-nav="flashcards">${Icon("layers")}<span>Flashcards</span> ${dueToday ? `<span class="badge-count">${dueToday}</span>` : ""}</button>
       <button class="nav-item ${route === "questoes" ? "active" : ""}" data-nav="questoes">${Icon("helpCircle")}<span>Questões</span></button>
+      <button class="nav-item ${route === "assuntos" ? "active" : ""}" data-nav="assuntos">${Icon("folder")}<span>Assuntos</span></button>
       <button class="nav-item ${route === "desempenho" ? "active" : ""}" data-nav="desempenho">${Icon("trendingUp")}<span>Desempenho</span></button>
       <button class="nav-item ${route === "upload" ? "active" : ""}" data-nav="upload">${Icon("upload")}<span>Upload de Materiais</span></button>
       <button class="nav-item ${route === "foco" ? "active" : ""}" data-nav="foco">${Icon("clock")}<span>Foco</span></button>
-    </div>
-
-    <div class="sidebar-section-title">Assuntos <button class="icon-btn" id="add-root-folder" title="Nova pasta">${Icon("plus", { size: 13 })}</button></div>
-    <div class="folder-tree" id="folder-tree">
-      ${folders
-        .map(
-          (f) => `
-        <div class="folder-row ${f.depth > 0 ? "sub" : ""} ${f.kind === "caderno" ? "caderno-row" : ""}" data-folder="${f.id}">
-          ${f.depth > 0 ? "" : Icon(f.kind === "caderno" ? "notebook" : "folder", { size: 14, cls: "folder-icon" })}<span>${escapeHtml(f.name)}</span>
-          <span class="count">${store.cardsInFolder(f.id).length ? store.cardsInFolder(f.id).length : ""}</span>
-          <div class="folder-actions">
-            <button class="icon-btn" data-add-sub="${f.id}" title="Novo bloco">${Icon("plus", { size: 12 })}</button>
-            <button class="icon-btn icon-btn-danger" data-delete-folder="${f.id}" title="Apagar pasta">${Icon("trash", { size: 12 })}</button>
-          </div>
-        </div>`
-        )
-        .join("")}
     </div>
 
     <div class="sidebar-footer">
@@ -427,74 +339,56 @@ function renderSidebar(sidebarEl) {
       else if (target === "desempenho") store.setRoute("desempenho");
       else if (target === "upload") store.setRoute("upload");
       else if (target === "foco") store.setRoute("foco");
+      else if (target === "assuntos") store.setRoute("assuntos");
       else store.setRoute("dashboard");
     });
   });
 
-  sidebarEl.querySelectorAll("[data-folder]").forEach((row) => {
-    row.addEventListener("click", (e) => {
-      if (e.target.closest("[data-add-sub]")) return;
-      const folderId = row.dataset.folder;
-      if (store.state.ui.route === "flashcards") {
-        store.setRoute("flashcards", { activeDeckId: folderId, reviewing: false });
-      } else if (store.state.ui.route === "questoes") {
-        store.setRoute("questoes", { activeQuestionFolderId: folderId, practicing: false });
-      } else {
-        store.setRoute("resumos", { activeFolderId: folderId, activeSummaryId: null });
-      }
-    });
-    // Soltar um flashcard arrastado aqui move ele pra este assunto/pasta.
-    row.addEventListener("dragover", (e) => {
-      if (!e.dataTransfer.types.includes("application/x-flashcard-id")) return;
-      e.preventDefault();
-      row.classList.add("drop-target");
-    });
-    row.addEventListener("dragleave", () => row.classList.remove("drop-target"));
-    row.addEventListener("drop", (e) => {
-      row.classList.remove("drop-target");
-      const cardId = e.dataTransfer.getData("application/x-flashcard-id");
-      if (!cardId) return;
-      e.preventDefault();
-      store.updateFlashcard(cardId, { folderId: row.dataset.folder });
-      showToast(`Flashcard movido pra "${store.folderPath(row.dataset.folder)}".`, "folder");
-    });
-  });
-
-  sidebarEl.querySelector("#add-root-folder").addEventListener("click", () => {
-    const name = prompt("Nome do novo assunto:");
-    if (name && name.trim()) store.addFolder(name.trim(), null);
-  });
-
-  sidebarEl.querySelectorAll("[data-add-sub]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const name = prompt("Nome do bloco:");
-      if (name && name.trim()) store.addFolder(name.trim(), btn.dataset.addSub);
-    });
-  });
-
-  sidebarEl.querySelectorAll("[data-delete-folder]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const folderId = btn.dataset.deleteFolder;
-      const descendantIds = store.descendantFolderIds(folderId);
-      const subCount = descendantIds.length - 1;
-      const summaryCount = store.state.summaries.filter((s) => descendantIds.includes(s.folderId)).length;
-      const cardCount = store.state.flashcards.filter((c) => descendantIds.includes(c.folderId)).length;
-      const questionCount = store.state.questions.filter((q) => descendantIds.includes(q.folderId)).length;
-      const parts = [];
-      if (subCount > 0) parts.push(`${subCount} bloco${subCount === 1 ? "" : "s"}`);
-      if (summaryCount > 0) parts.push(`${summaryCount} resumo${summaryCount === 1 ? "" : "s"}`);
-      if (cardCount > 0) parts.push(`${cardCount} flashcard${cardCount === 1 ? "" : "s"}`);
-      if (questionCount > 0) parts.push(`${questionCount} ${questionCount === 1 ? "questão" : "questões"}`);
-      const warning = parts.length ? ` Junto vai tudo o que está dentro dela: ${parts.join(", ")}.` : "";
-      if (!confirm(`Apagar "${store.folderPath(folderId)}"?${warning} Essa ação não pode ser desfeita.`)) return;
-      store.deleteFolder(folderId);
-      showToast("Pasta apagada.", "trash");
-    });
-  });
-
   sidebarEl.querySelector("#edit-profile-btn").addEventListener("click", openProfileModal);
+  sidebarEl.querySelector("#mode-badges-btn").addEventListener("click", openModesModal);
+}
+
+// Deixa trocar quais Alas (Concurso/Vestibular/Graduação/Medicina) estão
+// ativas sem precisar refazer o onboarding — clicando nas etiquetas da
+// sidebar. Mesma lista de MODES do onboarding, com toggle múltiplo.
+function openModesModal() {
+  const selected = new Set(store.state.modes || []);
+  openModal(
+    `
+    <h3>${Icon("map", { size: 16 })} Suas Alas de estudo</h3>
+    <p class="modal-sub">Marque uma ou mais — o app ajusta prioridades e relatórios pra cada uma.</p>
+    <div id="modes-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="confirm">Salvar</button>
+    </div>`,
+    {
+      onMount: (modal) => {
+        const list = modal.querySelector("#modes-list");
+        MODES.forEach((m) => {
+          const card = document.createElement("div");
+          card.className = `checkbox-card${selected.has(m.id) ? " selected" : ""}`;
+          card.innerHTML = `<span class="mode-icon">${Icon(m.icon, { size: 19 })}</span><div><b>${m.title}</b><span>${m.desc}</span></div>`;
+          card.addEventListener("click", () => {
+            if (selected.has(m.id)) selected.delete(m.id);
+            else selected.add(m.id);
+            card.classList.toggle("selected");
+          });
+          list.appendChild(card);
+        });
+        modal.querySelector("#cancel").addEventListener("click", closeModal);
+        modal.querySelector("#confirm").addEventListener("click", () => {
+          if (selected.size === 0) {
+            showToast("Escolha pelo menos uma Ala.", "alertCircle");
+            return;
+          }
+          store.setModes([...selected]);
+          closeModal();
+          showToast("Alas atualizadas.", "map");
+        });
+      },
+    }
+  );
 }
 
 function openProfileModal() {

@@ -5,9 +5,24 @@
 import { store } from "../store.js";
 import { showToast, playChime } from "../ui-utils.js";
 import { Icon } from "../icons.js";
+import { currentSpotifyUrl, promptSpotifyUrl, setSpotifyUrl } from "../spotify-player.js";
 
 const STUDY_PRESETS = [15, 25, 50];
 const BREAK_PRESETS = [5, 10, 15];
+
+// Frases curtas mostradas durante a sessão de estudo — um empurrãozinho
+// contra a maior distração de todas: o celular.
+const FOCUS_PHRASES = [
+  "Não vá se distrair no celular.",
+  "Deixa o celular de lado — depois você confere.",
+  "Uma notificação pode esperar. Seu foco, não.",
+  "Você já começou. Não para agora.",
+  "Sua cidade só cresce com foco de verdade.",
+  "Respira. Volta o olho pra tela. Segue firme.",
+];
+function randomFocusPhrase() {
+  return FOCUS_PHRASES[Math.floor(Math.random() * FOCUS_PHRASES.length)];
+}
 
 // Níveis da cidade — puramente cosmético, dá o "senso de progresso" tipo jogo.
 const CITY_LEVELS = [
@@ -62,7 +77,7 @@ function loadFocoState() {
   } catch {
     // ignora
   }
-  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, endsAt: null, spotifyUrl: null };
+  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, endsAt: null };
 }
 function saveFocoState() {
   try {
@@ -218,109 +233,36 @@ function constructionSceneHtml(count) {
     </div>`;
 }
 
-// ---- Playlist de foco (Spotify incorporado) ----
-// Aceita link de compartilhamento (open.spotify.com/playlist/... ou com
-// prefixo de idioma open.spotify.com/intl-pt/playlist/...) ou URI
-// (spotify:playlist:...), de playlist, álbum, faixa ou artista. Não precisa
-// de login nem de chave de API — é só o player incorporado público do
-// Spotify (toca prévia de 30s pra quem não é Premium/não está logado no
-// navegador, e a faixa completa pra quem está).
-function parseSpotifyRef(raw) {
-  const input = (raw || "").trim();
-  if (!input) return null;
-  let match = input.match(/spotify\.com\/(?:intl-[a-z]{2}\/)?(?:embed\/)?(playlist|album|track|artist)\/([a-zA-Z0-9]+)/i);
-  if (!match) match = input.match(/^spotify:(playlist|album|track|artist):([a-zA-Z0-9]+)$/i);
-  if (!match) return null;
-  const [, type, id] = match;
-  return { type: type.toLowerCase(), id };
-}
-function spotifyEmbedSrc(ref) {
-  return `https://open.spotify.com/embed/${ref.type}/${ref.id}?utm_source=generator&theme=0`;
-}
-function spotifyOpenUrl(ref) {
-  return `https://open.spotify.com/${ref.type}/${ref.id}`;
-}
-
-function spotifyBlockHtml(state) {
-  if (!state.spotifyUrl) {
+// ---- Playlist de foco ----
+// O player em si (iframe do Spotify) agora mora fora desta tela — veja
+// spotify-player.js — porque ele precisa sobreviver a trocas de tela, e
+// tudo dentro de #main é destruído a cada navegação. Aqui só ficam os
+// controles de conectar/trocar/remover, que atuam sobre esse player global.
+function spotifyStatusHtml() {
+  const url = currentSpotifyUrl();
+  if (!url) {
     return `
       <div class="spotify-block spotify-block--empty">
         <button class="btn btn-ghost btn-sm" id="spotify-add">${Icon("music", { size: 13 })}<span>Conectar playlist do Spotify</span></button>
       </div>`;
   }
-  // Além do player incorporado, sempre mostra um link direto pra playlist
-  // específica no Spotify — se o player embutido não tocar direito no
-  // navegador (ex.: cookie de terceiro bloqueado), esse link garante que a
-  // pessoa chega na playlist certa, não numa página genérica do Spotify.
-  const ref = parseSpotifyRef(state.spotifyUrl);
-  const openUrl = ref ? spotifyOpenUrl(ref) : null;
   return `
-    <div class="spotify-block">
-      <div class="spotify-embed-slot" id="spotify-slot"></div>
+    <div class="spotify-block spotify-block--connected">
+      <span>${Icon("music", { size: 13 })}Playlist conectada — veja o player fixo no canto da tela.</span>
       <div class="spotify-block-actions">
-        ${openUrl ? `<a class="spotify-open-link" href="${openUrl}" target="_blank" rel="noopener">${Icon("link", { size: 11 })}<span>Abrir no Spotify</span></a>` : ""}
         <button class="icon-btn-ghost" id="spotify-change" title="Trocar playlist">${Icon("pencil", { size: 12 })}</button>
         <button class="icon-btn-ghost" id="spotify-remove" title="Remover playlist">${Icon("x", { size: 12 })}</button>
       </div>
     </div>`;
 }
 
-// O iframe fica guardado num módulo à parte e é REAPROVEITADO (reparentado,
-// não recriado) a cada render — se recriássemos o elemento toda vez que a
-// tela re-renderiza (o que acontece a cada troca de fase, por exemplo), a
-// música reiniciaria do zero sempre. Só cria um iframe novo de verdade
-// quando o link muda.
-let spotifyFrameEl = null;
-let spotifyFrameSrc = null;
-
-function mountSpotifyFrame(container, state) {
-  const slot = container.querySelector("#spotify-slot");
-  if (!slot) return;
-  const ref = parseSpotifyRef(state.spotifyUrl);
-  if (!ref) return;
-  const src = spotifyEmbedSrc(ref);
-  if (!spotifyFrameEl || spotifyFrameSrc !== src) {
-    spotifyFrameEl = document.createElement("iframe");
-    spotifyFrameEl.src = src;
-    spotifyFrameEl.width = "100%";
-    spotifyFrameEl.height = "152";
-    spotifyFrameEl.style.borderRadius = "12px";
-    spotifyFrameEl.frameBorder = "0";
-    spotifyFrameEl.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
-    spotifyFrameEl.loading = "lazy";
-    spotifyFrameSrc = src;
-  }
-  slot.appendChild(spotifyFrameEl); // reparenta o mesmo elemento — não recarrega o player
-}
-
-function wireSpotifyControls(container, state) {
+function wireSpotifyControls(container) {
   const addBtn = container.querySelector("#spotify-add");
   const changeBtn = container.querySelector("#spotify-change");
   const removeBtn = container.querySelector("#spotify-remove");
-
-  const promptAndSave = (defaultValue) => {
-    const url = prompt("Cole o link de uma playlist, álbum ou faixa do Spotify (botão \"Compartilhar\" no Spotify):", defaultValue || "");
-    if (!url || !url.trim()) return;
-    if (!parseSpotifyRef(url)) {
-      showToast("Não reconheci esse link do Spotify. Copie o link de compartilhamento de uma playlist, álbum ou faixa.", "alertCircle");
-      return;
-    }
-    state.spotifyUrl = url.trim();
-    saveFocoState();
-    renderFoco(container);
-  };
-
-  if (addBtn) addBtn.addEventListener("click", () => promptAndSave());
-  if (changeBtn) changeBtn.addEventListener("click", () => promptAndSave(state.spotifyUrl));
-  if (removeBtn) {
-    removeBtn.addEventListener("click", () => {
-      state.spotifyUrl = null;
-      spotifyFrameEl = null;
-      spotifyFrameSrc = null;
-      saveFocoState();
-      renderFoco(container);
-    });
-  }
+  if (addBtn) addBtn.addEventListener("click", () => promptSpotifyUrl());
+  if (changeBtn) changeBtn.addEventListener("click", () => promptSpotifyUrl(currentSpotifyUrl()));
+  if (removeBtn) removeBtn.addEventListener("click", () => setSpotifyUrl(null));
 }
 
 export function renderFoco(container) {
@@ -340,7 +282,7 @@ export function renderFoco(container) {
     </div>
     <div class="focus-layout">
       <div class="panel focus-timer-card">
-        ${spotifyBlockHtml(state)}
+        ${spotifyStatusHtml()}
         ${focusStageHtml(state)}
       </div>
       <div class="panel focus-city-card">
@@ -365,8 +307,7 @@ export function renderFoco(container) {
     </div>
   `;
 
-  mountSpotifyFrame(container, state);
-  wireSpotifyControls(container, state);
+  wireSpotifyControls(container);
   wireStage(container, state);
 }
 
@@ -394,12 +335,14 @@ function focusStageHtml(state) {
 
   if (state.phase === "study") {
     const cityCount = (store.state.city || []).length;
+    if (!state.phrase) state.phrase = randomFocusPhrase();
     return `
       <div class="focus-running">
         <div class="focus-phase-label">Erguendo prédio...</div>
         <div class="focus-countdown focus-countdown--sm" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
         ${constructionSceneHtml(cityCount)}
         <div class="focus-progress-track"><div class="focus-progress-fill" id="foco-progress-fill"></div></div>
+        <div class="focus-phrase">${Icon("lightbulb", { size: 13 })}<span>${state.phrase}</span></div>
         <button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>
       </div>`;
   }
@@ -466,6 +409,7 @@ function wireStage(container, state) {
     container.querySelector("#focus-start").addEventListener("click", () => {
       state.phase = "study";
       state.endsAt = Date.now() + state.studyMinutes * 60000;
+      state.phrase = randomFocusPhrase();
       saveFocoState();
       renderFoco(container);
     });

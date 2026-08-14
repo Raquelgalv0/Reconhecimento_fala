@@ -1,6 +1,7 @@
 import { store } from "../store.js";
 import { debounce, stripHtml, formatDate, showToast, openModal, closeModal } from "../ui-utils.js";
 import { generateSummaryFromText, suggestFlashcardFromSelection, generateQuestionsFromText } from "../ai.js";
+import { openAiChat } from "../ai-chat.js";
 import { Icon } from "../icons.js";
 
 export function renderResumos(container) {
@@ -63,6 +64,14 @@ const FONT_STYLES = [
   { id: "moderna", label: "Moderna", fontName: "Manrope", sample: "Assim fica o seu texto" },
 ];
 
+// "media" é o espaçamento padrão de sempre (1.85) — só ganhou nome pra virar
+// uma opção entre outras, sem mudar a aparência de resumos já existentes.
+const LINE_SPACINGS = [
+  { id: "simples", label: "Simples" },
+  { id: "media", label: "1,5 linhas" },
+  { id: "duplo", label: "Duplo" },
+];
+
 // ---------------------------------------------------------------- LIST ----
 function renderList(container, activeFolderId) {
   const folders = store.flattenFolders();
@@ -102,6 +111,7 @@ function renderList(container, activeFolderId) {
           const folderName = store.state.folders.find((f) => f.id === s.folderId)?.name || "";
           return `
         <div class="summary-card" data-open="${s.id}">
+          <button class="summary-card-delete" data-delete-summary="${s.id}" title="Excluir resumo">${Icon("trash", { size: 13 })}</button>
           <h4>${escapeAttr(s.title || "Sem título")}</h4>
           <div class="excerpt">${escapeAttr(stripHtml(s.contentHtml)).slice(0, 140) || "Resumo vazio. Clique para escrever."}</div>
           <div class="meta">
@@ -124,6 +134,18 @@ function renderList(container, activeFolderId) {
   container.querySelectorAll("[data-open]").forEach((card) => {
     card.addEventListener("click", () => store.setRoute("resumos", { activeSummaryId: card.dataset.open }));
   });
+  container.querySelectorAll("[data-delete-summary]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteSummary;
+      const summary = store.state.summaries.find((s) => s.id === id);
+      if (!summary) return;
+      if (confirm(`Excluir o resumo "${summary.title || "Sem título"}"? Os flashcards já criados a partir dele são mantidos.`)) {
+        store.deleteSummary(id);
+        showToast("Resumo excluído.", "trash");
+      }
+    });
+  });
   const newBtn = container.querySelector("#btn-new-summary");
   const newBtn2 = container.querySelector("#new-card-inline");
   [newBtn, newBtn2].forEach((b) => b && b.addEventListener("click", () => openNewSummaryModal(activeFolderId)));
@@ -138,10 +160,13 @@ function renderList(container, activeFolderId) {
 }
 
 function openNewSubfolderModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie um assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   openModal(
     `
@@ -181,10 +206,13 @@ function openNewSubfolderModal(defaultFolderId) {
 }
 
 function openNewSummaryModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   openModal(
     `
@@ -247,30 +275,49 @@ function renderEditor(container, summaryId) {
       <div class="tb-group">
         <button data-cmd="bold" title="Negrito"><b>B</b></button>
         <button data-cmd="italic" title="Itálico"><i>I</i></button>
+        <button data-cmd="underline" title="Sublinhado"><u>U</u></button>
+        <button data-cmd="removeFormat" title="Limpar formatação">${Icon("eraser", { size: 14 })}</button>
+      </div>
+      <div class="sep"></div>
+      <div class="tb-group">
+        <button data-cmd="formatBlock:p" title="Parágrafo normal">P</button>
         <button data-cmd="formatBlock:h2" title="Título">H2</button>
         <button data-cmd="formatBlock:h3" title="Subtítulo">H3</button>
       </div>
       <div class="sep"></div>
       <div class="tb-group">
-        <button data-cmd="insertUnorderedList" title="Lista">${Icon("list", { size: 15 })}</button>
+        <button data-cmd="insertUnorderedList" title="Lista com marcadores">${Icon("list", { size: 15 })}</button>
+        <button data-cmd="insertOrderedList" title="Lista numerada">${Icon("orderedList", { size: 15 })}</button>
         <button data-cmd="formatBlock:blockquote" title="Citação">${Icon("quote", { size: 15 })}</button>
+      </div>
+      <div class="sep"></div>
+      <div class="tb-group">
+        <button data-cmd="justifyLeft" title="Alinhar à esquerda">${Icon("alignLeft", { size: 15 })}</button>
+        <button data-cmd="justifyCenter" title="Centralizar">${Icon("alignCenter", { size: 15 })}</button>
+        <button data-cmd="justifyRight" title="Alinhar à direita">${Icon("alignRight", { size: 15 })}</button>
+        <button data-cmd="justifyFull" title="Justificar">${Icon("alignJustify", { size: 15 })}</button>
+        <button data-cmd="outdent" title="Diminuir recuo">${Icon("indentDecrease", { size: 15 })}</button>
+        <button data-cmd="indent" title="Aumentar recuo">${Icon("indentIncrease", { size: 15 })}</button>
       </div>
       <div class="sep"></div>
       <div class="tb-group">
         <button class="toolbar-font-btn" id="font-style-btn" title="Fonte do resumo">
           ${Icon("pencil", { size: 13 })}<span>${FONT_STYLES.find((f) => f.id === (summary.fontFamily || "padrao")).label}</span>
         </button>
+        <button class="toolbar-font-btn" id="line-spacing-btn" title="Espaçamento entre linhas">
+          ${Icon("lineSpacing", { size: 13 })}<span>${LINE_SPACINGS.find((l) => l.id === (summary.lineSpacing || "media")).label}</span>
+        </button>
       </div>
       <div class="sep"></div>
       <div class="tb-group">
         <div class="tb-popover-wrap">
-          <button class="tb-popover-trigger" id="fc-trigger" title="Cor do texto"><b style="color:${FONT_COLORS[0].hex}">A</b></button>
+          <button class="tb-popover-trigger" id="fc-trigger" title="Cor do texto (Ctrl+Shift+L repete a última cor)"><b style="color:${FONT_COLORS[0].hex}">A</b></button>
           <div class="tb-popover" id="fc-popover">
             ${FONT_COLORS.map((c) => `<button data-fc="${c.hex}" class="fc-swatch" style="color:${c.hex}" title="Cor do texto: ${c.label}">A</button>`).join("")}
           </div>
         </div>
         <div class="tb-popover-wrap">
-          <button class="tb-popover-trigger" id="hl-trigger" title="Destacar">${Icon("highlighter", { size: 15 })}</button>
+          <button class="tb-popover-trigger" id="hl-trigger" title="Destacar (Ctrl+Shift+H repete a última cor)">${Icon("highlighter", { size: 15 })}</button>
           <div class="tb-popover" id="hl-popover">
             ${HIGHLIGHT_COLORS.map((c) => `<button data-hl="${c.hex}" class="hl-swatch ${c.cls}" title="Destacar (${c.label})"></button>`).join("")}
             <div class="tb-popover-sep"></div>
@@ -286,7 +333,7 @@ function renderEditor(container, summaryId) {
       <div class="sep"></div>
       <div class="tb-group">
         <button data-cmd="link" title="Adicionar link">${Icon("link", { size: 15 })}</button>
-        <button data-cmd="image" title="Adicionar imagem da galeria">${Icon("image", { size: 15 })}</button>
+        <button data-cmd="image" title="Adicionar imagem da galeria (Ctrl+Shift+K)">${Icon("image", { size: 15 })}</button>
         <div class="tb-popover-wrap">
           <button class="toolbar-font-btn tb-popover-trigger" id="insert-trigger" title="Inserir bloco">${Icon("plus", { size: 13 })}<span>Inserir</span></button>
           <div class="tb-popover tb-popover--menu" id="insert-popover">
@@ -305,9 +352,10 @@ function renderEditor(container, summaryId) {
       </div>
       <button class="ai-btn" id="ai-generate">${Icon("sparkles", { size: 14 })}<span>Gerar com IA</span></button>
       <button class="ai-btn" id="ai-questions">${Icon("helpCircle", { size: 14 })}<span>Transformar em questões</span></button>
+      <button class="ai-btn ai-btn-ghost" id="ai-doubt">${Icon("messageCircle", { size: 14 })}<span>Tirar dúvida com IA</span></button>
     </div>
     <input type="file" id="editor-image-input" accept="image/*" style="display:none" />
-    <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"}" contenteditable="true" data-focus-guard
+    <div id="editor-body" class="editor-body page-style--${summary.pageStyle || "minimal"} font--${summary.fontFamily || "padrao"} ls--${summary.lineSpacing || "media"}" contenteditable="true" data-focus-guard
          data-placeholder="Comece a escrever ou clique em “Gerar com IA” para criar a partir de um material...">${summary.contentHtml || ""}</div>
   `;
 
@@ -350,6 +398,9 @@ function renderEditor(container, summaryId) {
   // --- toolbar formatting ---
   const imageInput = container.querySelector("#editor-image-input");
   let savedRange = null;
+  // Guarda a última cor escolhida (nos popovers ou na barra flutuante de
+  // seleção), pra repetir com o atalho de teclado sem reabrir o menu.
+  const lastColors = { fc: FONT_COLORS[1].hex, hl: HIGHLIGHT_COLORS[0].hex };
 
   imageInput.addEventListener("change", () => {
     const file = imageInput.files[0];
@@ -404,6 +455,7 @@ function renderEditor(container, summaryId) {
     btn.addEventListener("mousedown", (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       editorBody.focus();
+      lastColors.fc = btn.dataset.fc;
       document.execCommand("foreColor", false, btn.dataset.fc);
       editorBody.dispatchEvent(new Event("input"));
     });
@@ -413,9 +465,39 @@ function renderEditor(container, summaryId) {
     btn.addEventListener("mousedown", (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       editorBody.focus();
+      lastColors.hl = btn.dataset.hl;
       applyHighlightColor(editorBody, btn.dataset.hl);
       editorBody.dispatchEvent(new Event("input"));
     });
+  });
+
+  // --- atalhos de teclado: repete a última cor/destaque usados, e abre o
+  // seletor de imagem, sem precisar abrir os menus da barra de ferramentas.
+  editorBody.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "h") {
+      e.preventDefault();
+      if (applyHighlightColor(editorBody, lastColors.hl)) {
+        editorBody.dispatchEvent(new Event("input"));
+      } else {
+        showToast("Selecione um trecho de texto para destacar.", "highlighter");
+      }
+    } else if (key === "l") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        showToast("Selecione um trecho de texto para colorir.", "alertCircle");
+        return;
+      }
+      document.execCommand("foreColor", false, lastColors.fc);
+      editorBody.dispatchEvent(new Event("input"));
+    } else if (key === "k") {
+      e.preventDefault();
+      const sel = window.getSelection();
+      savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+      imageInput.click();
+    }
   });
   const eraseBtn = container.querySelector("[data-hl-erase]");
   let eraserMode = false;
@@ -478,8 +560,13 @@ function renderEditor(container, summaryId) {
 
   container.querySelector("#ai-generate").addEventListener("click", () => openAiGenerateModal(summaryId, editorBody));
   container.querySelector("#ai-questions").addEventListener("click", () => openGenerateQuestionsModal(summaryId, editorBody));
+  container.querySelector("#ai-doubt").addEventListener("click", () => {
+    const text = stripHtml(editorBody.innerHTML).trim();
+    openAiChat(text ? { text: text.slice(0, 6000), label: summary.title || "Sem título" } : null);
+  });
   container.querySelector("#page-style-btn").addEventListener("click", () => openPageStyleModal(summaryId, summary.pageStyle || "minimal"));
   container.querySelector("#font-style-btn").addEventListener("click", () => openFontModal(summaryId, summary.fontFamily || "padrao"));
+  container.querySelector("#line-spacing-btn").addEventListener("click", () => openLineSpacingModal(summaryId, summary.lineSpacing || "media"));
 
   // --- insert-block toolbar ---
   const INSERTERS = {
@@ -566,7 +653,7 @@ function renderEditor(container, summaryId) {
   });
 
   // --- selection -> floating toolbar ---
-  setupSelectionToolbar(editorBody, summary);
+  setupSelectionToolbar(editorBody, summary, lastColors);
 }
 
 // Aplica cor de destaque com o comando nativo do navegador (hiliteColor) em
@@ -689,7 +776,7 @@ function unwrapHighlight(root) {
   return true;
 }
 
-function setupSelectionToolbar(editorBody, summary) {
+function setupSelectionToolbar(editorBody, summary, lastColors) {
   let bar = document.getElementById("selection-toolbar");
   if (!bar) {
     bar = document.createElement("div");
@@ -736,6 +823,7 @@ function setupSelectionToolbar(editorBody, summary) {
 
   selFcBtns.forEach((b) => {
     b.onclick = () => {
+      if (lastColors) lastColors.fc = b.dataset.fc;
       document.execCommand("foreColor", false, b.dataset.fc);
       editorBody.dispatchEvent(new Event("input"));
       hide();
@@ -744,6 +832,7 @@ function setupSelectionToolbar(editorBody, summary) {
 
   selHlBtns.forEach((b) => {
     b.onclick = () => {
+      if (lastColors) lastColors.hl = b.dataset.hl;
       applyHighlightColor(editorBody, b.dataset.hl);
       editorBody.dispatchEvent(new Event("input"));
       hide();
@@ -900,7 +989,18 @@ function openAiGenerateModal(summaryId, editorBody) {
 function openGenerateQuestionsModal(summaryId, editorBody) {
   const summary = store.state.summaries.find((s) => s.id === summaryId);
   const isMedicina = (summary?.pageStyle || "minimal") === "medicina";
-  let style = "conceitual";
+  // Clínico e conceitual podem ser marcados juntos (vira "misto"); dificuldade
+  // é sempre uma escolha única entre as 4 opções (Misto aqui é uma 4ª opção,
+  // não uma combinação de outras).
+  const activeStyles = new Set(["conceitual"]);
+  let difficulty = "medio";
+
+  const DIFFICULTIES = [
+    { id: "facil", label: "Fácil" },
+    { id: "medio", label: "Médio" },
+    { id: "dificil", label: "Difícil" },
+    { id: "misto", label: "Misto" },
+  ];
 
   const bodyHtml = `
     <h3>${Icon("helpCircle", { size: 16 })} Transformar em questões</h3>
@@ -908,14 +1008,20 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
     ${
       isMedicina
         ? `<div class="field">
-      <label>Tipo de questão</label>
+      <label>Tipo de questão (marque uma ou as duas)</label>
       <div class="btn-row">
-        <button type="button" class="btn btn-sm btn-primary" id="qstyle-clinico" data-qstyle="clinico">${Icon("pulse", { size: 13 })}<span>Caso clínico</span></button>
-        <button type="button" class="btn btn-sm btn-ghost" id="qstyle-conceitual" data-qstyle="conceitual">${Icon("lightbulb", { size: 13 })}<span>Conceitual</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" id="qstyle-clinico" data-qstyle="clinico">${Icon("pulse", { size: 13 })}<span>Caso clínico</span></button>
+        <button type="button" class="btn btn-sm btn-primary" id="qstyle-conceitual" data-qstyle="conceitual">${Icon("lightbulb", { size: 13 })}<span>Conceitual</span></button>
       </div>
     </div>`
         : ""
     }
+    <div class="field">
+      <label>Nível de dificuldade</label>
+      <div class="btn-row" id="qdifficulty-row">
+        ${DIFFICULTIES.map((d) => `<button type="button" class="btn btn-sm ${d.id === difficulty ? "btn-primary" : "btn-ghost"}" data-qdifficulty="${d.id}">${d.label}</button>`).join("")}
+      </div>
+    </div>
     <div class="field">
       <label>Quantas questões?</label>
       <input type="number" id="q-count" min="1" max="10" value="3" />
@@ -927,21 +1033,35 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
 
   openModal(bodyHtml, {
     onMount: (modal) => {
-      style = isMedicina ? "clinico" : "conceitual";
+      if (isMedicina) activeStyles.add("clinico");
       modal.querySelector("#cancel").addEventListener("click", closeModal);
       if (isMedicina) {
         const clinicoBtn = modal.querySelector("#qstyle-clinico");
         const conceitualBtn = modal.querySelector("#qstyle-conceitual");
-        const setStyle = (s) => {
-          style = s;
-          clinicoBtn.classList.toggle("btn-primary", s === "clinico");
-          clinicoBtn.classList.toggle("btn-ghost", s !== "clinico");
-          conceitualBtn.classList.toggle("btn-primary", s === "conceitual");
-          conceitualBtn.classList.toggle("btn-ghost", s !== "conceitual");
+        clinicoBtn.classList.add("btn-primary");
+        clinicoBtn.classList.remove("btn-ghost");
+        const toggleStyle = (id, btn) => {
+          if (activeStyles.has(id)) {
+            if (activeStyles.size === 1) return; // sempre precisa de pelo menos um tipo marcado
+            activeStyles.delete(id);
+          } else {
+            activeStyles.add(id);
+          }
+          btn.classList.toggle("btn-primary", activeStyles.has(id));
+          btn.classList.toggle("btn-ghost", !activeStyles.has(id));
         };
-        clinicoBtn.addEventListener("click", () => setStyle("clinico"));
-        conceitualBtn.addEventListener("click", () => setStyle("conceitual"));
+        clinicoBtn.addEventListener("click", () => toggleStyle("clinico", clinicoBtn));
+        conceitualBtn.addEventListener("click", () => toggleStyle("conceitual", conceitualBtn));
       }
+      modal.querySelectorAll("[data-qdifficulty]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          difficulty = btn.dataset.qdifficulty;
+          modal.querySelectorAll("[data-qdifficulty]").forEach((b) => {
+            b.classList.toggle("btn-primary", b.dataset.qdifficulty === difficulty);
+            b.classList.toggle("btn-ghost", b.dataset.qdifficulty !== difficulty);
+          });
+        });
+      });
       modal.querySelector("#confirm").addEventListener("click", async () => {
         const text = stripHtml(editorBody.innerHTML).trim();
         if (!text) {
@@ -949,17 +1069,19 @@ function openGenerateQuestionsModal(summaryId, editorBody) {
           return;
         }
         const count = Math.min(10, Math.max(1, parseInt(modal.querySelector("#q-count").value, 10) || 3));
+        const style = activeStyles.size === 2 ? "misto" : [...activeStyles][0];
         const confirmBtn = modal.querySelector("#confirm");
         confirmBtn.disabled = true;
         confirmBtn.textContent = "Gerando...";
         try {
-          const questions = await generateQuestionsFromText(text, count, style);
+          const questions = await generateQuestionsFromText(text, count, style, difficulty);
           questions.forEach((q) => {
             store.addQuestion({
               folderId: summary.folderId,
               statement: q.statement,
               alternatives: q.alternatives,
               correctId: q.correctId,
+              difficulty: q.difficulty || (difficulty === "misto" ? "medio" : difficulty),
             });
           });
           closeModal();
@@ -1048,4 +1170,29 @@ function openFontModal(summaryId, currentFont) {
 function applyFontFamily(summaryId, fontId) {
   store.updateSummary(summaryId, { fontFamily: fontId });
   showToast(`Fonte "${FONT_STYLES.find((f) => f.id === fontId).label}" aplicada.`, "pencil");
+}
+
+function openLineSpacingModal(summaryId, current) {
+  openModal(
+    `
+    <h3>${Icon("lineSpacing", { size: 16 })} Espaçamento entre linhas</h3>
+    <div class="btn-row" style="flex-wrap:wrap;">
+      ${LINE_SPACINGS.map((l) => `<button type="button" class="btn btn-sm ${l.id === current ? "btn-primary" : "btn-ghost"}" data-spacing="${l.id}">${l.label}</button>`).join("")}
+    </div>`,
+    {
+      onMount: (modal) => {
+        modal.querySelectorAll("[data-spacing]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyLineSpacing(summaryId, btn.dataset.spacing);
+            closeModal();
+          });
+        });
+      },
+    }
+  );
+}
+
+function applyLineSpacing(summaryId, spacingId) {
+  store.updateSummary(summaryId, { lineSpacing: spacingId });
+  showToast(`Espaçamento "${LINE_SPACINGS.find((l) => l.id === spacingId).label}" aplicado.`, "lineSpacing");
 }

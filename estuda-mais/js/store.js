@@ -1,6 +1,7 @@
 import { newSrsState } from "./srs.js";
 import { showToast } from "./ui-utils.js";
 import * as db from "./db.js";
+import { MODE_TAG } from "./modes.js";
 
 function uid(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
@@ -41,8 +42,8 @@ function emptyState() {
 // (snake_case). Mantém store.js como a única peça que sabe desse mapeamento
 // — o resto do app continua lendo store.state exatamente como antes. ----
 const mapFolder = {
-  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId, kind: f.kind || "pasta" }),
-  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id, kind: r.kind || "pasta" }),
+  toDb: (f, userId) => ({ id: f.id, user_id: userId, name: f.name, parent_id: f.parentId, kind: f.kind || "pasta", mode: f.mode || null }),
+  fromDb: (r) => ({ id: r.id, name: r.name, parentId: r.parent_id, kind: r.kind || "pasta", mode: r.mode || null }),
 };
 const mapSummary = {
   toDb: (s, userId) => ({
@@ -53,6 +54,7 @@ const mapSummary = {
     content_html: s.contentHtml,
     page_style: s.pageStyle,
     font_family: s.fontFamily,
+    line_spacing: s.lineSpacing,
     created_at: s.createdAt,
     updated_at: s.updatedAt,
   }),
@@ -63,6 +65,7 @@ const mapSummary = {
     contentHtml: r.content_html,
     pageStyle: r.page_style,
     fontFamily: r.font_family || "padrao",
+    lineSpacing: r.line_spacing || "media",
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }),
@@ -303,6 +306,15 @@ class Store {
     db.insertRow("folders", mapFolder.toDb(folder, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
     return folder;
   }
+  // patch aceita { name, mode } — usado hoje só pra "migrar pra outra Ala"
+  // (o campo mode), mas fica genérico pra qualquer edição futura de pasta.
+  updateFolder(folderId, patch) {
+    const f = this.state.folders.find((x) => x.id === folderId);
+    if (!f) return;
+    Object.assign(f, patch);
+    this.save();
+    db.updateRow("folders", folderId, mapFolder.toDb(f, this.userId), this.session).catch((err) => reportSyncError("salvar a pasta", err));
+  }
   folderPath(folderId) {
     const names = [];
     let current = this.state.folders.find((f) => f.id === folderId);
@@ -415,7 +427,7 @@ class Store {
   }
 
   // ---- Flashcards ----
-  addFlashcard({ folderId, front, back, hint = "", summaryId = null }) {
+  addFlashcard({ folderId, front, back, hint = "", summaryId = null, tags = [] }) {
     const card = {
       id: uid("fc"),
       folderId,
@@ -423,6 +435,7 @@ class Store {
       back,
       hint,
       summaryId,
+      tags,
       createdAt: new Date().toISOString(),
       srs: newSrsState(),
     };
@@ -430,6 +443,33 @@ class Store {
     this.save();
     db.insertRow("flashcards", mapCard.toDb(card, this.userId), this.session).catch((err) => reportSyncError("salvar o flashcard", err));
     return card;
+  }
+  // Usado pela importação de .apkg (e qualquer outra fonte que precise
+  // criar muitos cards de uma vez) — um só save()/re-render local e o
+  // envio pro banco em lotes, em vez de uma chamada de rede por card.
+  // Cada item aceita os mesmos campos de addFlashcard, mais `srs` e
+  // `createdAt` opcionais (pra já nascer com estado/data histórica, no
+  // caso da importação reconstruir o histórico de revisão do Anki).
+  addFlashcardsBulk(cards) {
+    const withIds = cards.map((c) => ({
+      id: uid("fc"),
+      folderId: c.folderId,
+      front: c.front,
+      back: c.back,
+      hint: c.hint || "",
+      summaryId: c.summaryId || null,
+      tags: c.tags || [],
+      createdAt: c.createdAt || new Date().toISOString(),
+      srs: c.srs || newSrsState(),
+    }));
+    this.state.flashcards.push(...withIds);
+    this.save();
+    const BATCH = 300;
+    const rows = withIds.map((c) => mapCard.toDb(c, this.userId));
+    for (let i = 0; i < rows.length; i += BATCH) {
+      db.insertRows("flashcards", rows.slice(i, i + BATCH), this.session).catch((err) => reportSyncError("salvar os flashcards importados", err));
+    }
+    return withIds;
   }
   updateFlashcard(id, patch) {
     const c = this.state.flashcards.find((x) => x.id === id);
@@ -738,6 +778,16 @@ class Store {
           newFolders.push(folder);
         }
       });
+    // "Matérias" é opcional no onboarding — mas terminar sem nenhum assunto
+    // criado é um beco sem saída: Resumos, Flashcards, Questões e Upload
+    // dependem de ter pelo menos uma pasta pra salvar o material em. Garante
+    // um ponto de partida mesmo se a pessoa pular esse campo.
+    if (this.state.folders.length === 0) {
+      const fallbackName = profile.studyArea?.trim() || MODE_TAG[modes[0]] || "Meus estudos";
+      const folder = { id: uid("f"), name: fallbackName, parentId: null };
+      this.state.folders.push(folder);
+      newFolders.push(folder);
+    }
     this.state.onboarded = true;
     this.save();
 
@@ -771,6 +821,13 @@ class Store {
       this.session,
       "id"
     ).catch((err) => reportSyncError("salvar seu perfil", err));
+  }
+  // Troca as Alas ativas (Concurso/Vestibular/Graduação/Medicina) — usado
+  // pelas etiquetas clicáveis na sidebar, sem precisar refazer o onboarding.
+  setModes(modes) {
+    this.state.modes = modes;
+    this.save();
+    db.updateRow("profiles", this.userId, { modes }, this.session, "id").catch((err) => reportSyncError("salvar suas Alas", err));
   }
 
   // ---- Backup ----

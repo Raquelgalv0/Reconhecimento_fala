@@ -20,10 +20,12 @@ create table if not exists folders (
   user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
   name text not null,
   parent_id text references folders(id) on delete cascade,
-  kind text not null default 'pasta'
+  kind text not null default 'pasta',
+  mode text
 );
--- Garante a coluna em bancos que já tinham a tabela criada antes desta versão.
+-- Garante as colunas em bancos que já tinham a tabela criada antes desta versão.
 alter table folders add column if not exists kind text not null default 'pasta';
+alter table folders add column if not exists mode text;
 
 -- ---------- summaries ----------
 create table if not exists summaries (
@@ -34,11 +36,13 @@ create table if not exists summaries (
   content_html text not null default '',
   page_style text not null default 'minimal',
   font_family text not null default 'padrao',
+  line_spacing text not null default 'media',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
--- Garante a coluna em bancos que já tinham a tabela criada antes desta versão.
+-- Garante as colunas em bancos que já tinham a tabela criada antes desta versão.
 alter table summaries add column if not exists font_family text not null default 'padrao';
+alter table summaries add column if not exists line_spacing text not null default 'media';
 
 -- ---------- flashcards ----------
 create table if not exists flashcards (
@@ -50,8 +54,10 @@ create table if not exists flashcards (
   hint text not null default '',
   summary_id text references summaries(id) on delete set null,
   created_at timestamptz not null default now(),
-  srs jsonb not null default '{}'::jsonb
+  srs jsonb not null default '{}'::jsonb,
+  tags jsonb not null default '[]'::jsonb
 );
+alter table flashcards add column if not exists tags jsonb not null default '[]'::jsonb;
 
 -- ---------- questions ----------
 create table if not exists questions (

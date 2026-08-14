@@ -1,6 +1,6 @@
 import { store } from "../store.js";
 import { showToast, openModal, closeModal, relativeDue, playFeedbackSound } from "../ui-utils.js";
-import { scheduleNext, isDueToday } from "../srs.js";
+import { scheduleNext, isDueToday, previewIntervals, intervalLabel, GRADES, GRADE_LABELS } from "../srs.js";
 import { Icon } from "../icons.js";
 
 // Fila de revisão da sessão atual — guardada fora do ciclo de render para
@@ -52,7 +52,7 @@ function renderDecksGrid(container) {
         })
         .join("")}
     </div>
-    ${folders.length === 0 ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na barra lateral para começar.</div>` : ""}
+    ${folders.length === 0 ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>Crie um assunto na aba Assuntos, ou clique em "Novo flashcard" pra criar o primeiro na hora.</div>` : ""}
   `;
 
   container.querySelectorAll("[data-deck]").forEach((el) => {
@@ -93,8 +93,7 @@ function renderDeckDetail(container, deckId) {
       ${cards
         .map(
           (c) => `
-        <div class="flash-row" data-card="${c.id}" draggable="true" title="Arraste pra um assunto na barra lateral pra mover">
-          <span class="drag-handle">${Icon("menu", { size: 13 })}</span>
+        <div class="flash-row" data-card="${c.id}">
           <span class="front">${esc(c.front)}</span>
           <span class="due-tag ${isDueToday(c) ? "today" : ""}">${isDueToday(c) ? "revisar hoje" : `próx. rev. ${relativeDue(c.srs.dueDate)}`}</span>
           <button class="btn btn-sm btn-ghost" data-edit="${c.id}">${Icon("pencil", { size: 13 })}</button>
@@ -103,7 +102,7 @@ function renderDeckDetail(container, deckId) {
         .join("")}
     </div>
     ${cards.length === 0 ? `<div class="empty-state"><div class="big">${Icon("layers", { size: 30 })}</div>Nenhum flashcard neste baralho ainda.</div>` : ""}
-    ${cards.length > 0 ? `<div class="field-hint" style="margin-top:8px;">Dica: arraste um flashcard pra cima de um assunto na barra lateral pra mover ele de pasta.</div>` : ""}
+    ${cards.length > 0 ? `<div class="field-hint" style="margin-top:8px;">Dica: clique no lápis pra editar um flashcard e mudar ele de assunto.</div>` : ""}
   `;
 
   container.querySelector("#back").addEventListener("click", () => store.setRoute("flashcards", { activeDeckId: null }));
@@ -114,14 +113,6 @@ function renderDeckDetail(container, deckId) {
       e.stopPropagation();
       openEditCardModal(btn.dataset.edit);
     });
-  });
-  container.querySelectorAll(".flash-row[draggable]").forEach((row) => {
-    row.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("application/x-flashcard-id", row.dataset.card);
-      e.dataTransfer.effectAllowed = "move";
-      row.classList.add("dragging");
-    });
-    row.addEventListener("dragend", () => row.classList.remove("dragging"));
   });
 }
 
@@ -134,10 +125,13 @@ function folderOptionsHtml(selectedId) {
 }
 
 function openManualCardModal(defaultFolderId) {
-  const folders = store.flattenFolders();
+  let folders = store.flattenFolders();
   if (folders.length === 0) {
-    showToast("Crie uma pasta/assunto na barra lateral primeiro.", "alertCircle");
-    return;
+    const name = prompt("Ainda não existe nenhum assunto. Como quer chamar o primeiro?");
+    if (!name || !name.trim()) return;
+    store.addFolder(name.trim(), null);
+    showToast(`"${name.trim()}" criado.`, "folder");
+    folders = store.flattenFolders();
   }
   const initialFolder = defaultFolderId || folders[0].id;
   openModal(
@@ -274,7 +268,12 @@ function renderReview(container, deckId) {
     session.index++;
     return renderReview(container, deckId);
   }
-  const folderName = store.folderPath(card.folderId);
+  // Mostra o título do resumo de origem (mais útil pra localizar de onde o
+  // cartão veio); se o flashcard foi criado manualmente (sem resumo
+  // vinculado), cai de volta pro nome da pasta/assunto.
+  const sourceSummary = card.summaryId ? store.state.summaries.find((s) => s.id === card.summaryId) : null;
+  const cardTopLabel = sourceSummary ? sourceSummary.title || "Sem título" : store.folderPath(card.folderId);
+  const preview = previewIntervals(card);
 
   container.innerHTML = `
     <div class="review-stage">
@@ -282,21 +281,31 @@ function renderReview(container, deckId) {
       <div class="flip-card">
         <div class="flip-card-inner" id="flip-inner">
           <div class="flip-face front">
-            <div class="card-folder-label">${esc(folderName)}</div>
+            <div class="card-folder-label">${esc(cardTopLabel)}</div>
             <div class="kicker">Pergunta</div>
             <div class="content">${esc(card.front)}</div>
             <div class="flip-hint">clique no cartão para virar</div>
           </div>
           <div class="flip-face back">
-            <div class="card-folder-label">${esc(folderName)}</div>
+            <div class="card-folder-label">${esc(cardTopLabel)}</div>
             <div class="kicker">Resposta</div>
             <div class="content">${esc(card.back)}</div>
           </div>
         </div>
       </div>
-      <div class="review-actions" id="actions" style="visibility:hidden">
-        <button class="btn-erro" id="btn-errei">${Icon("x", { size: 15 })}<span>Errei</span></button>
-        <button class="btn-acerto" id="btn-acertei">${Icon("checkPlain", { size: 15 })}<span>Acertei</span></button>
+      <div class="review-actions review-actions--fsrs" id="actions" style="visibility:hidden">
+        <button class="grade-btn grade-btn--again" data-grade="${GRADES.AGAIN}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.AGAIN]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.AGAIN])}</span>
+        </button>
+        <button class="grade-btn grade-btn--hard" data-grade="${GRADES.HARD}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.HARD]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.HARD])}</span>
+        </button>
+        <button class="grade-btn grade-btn--good" data-grade="${GRADES.GOOD}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.GOOD]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.GOOD])}</span>
+        </button>
+        <button class="grade-btn grade-btn--easy" data-grade="${GRADES.EASY}">
+          <span class="grade-label">${GRADE_LABELS[GRADES.EASY]}</span><span class="grade-interval">${intervalLabel(preview[GRADES.EASY])}</span>
+        </button>
       </div>
     </div>`;
 
@@ -307,20 +316,22 @@ function renderReview(container, deckId) {
     actions.style.visibility = inner.classList.contains("flipped") ? "visible" : "hidden";
   });
 
-  const grade = (result) => {
-    playFeedbackSound(result === "acertou");
-    scheduleNext(card, result);
-    store.updateFlashcard(card.id, { srs: card.srs });
-    store.logStudyDay({ correct: result === "acertou" });
-    store.markFlashcardReviewedToday();
+  const grade = (gradeValue) => {
+    // A fila avança ANTES das chamadas ao store: updateFlashcard/logStudyDay
+    // disparam save() -> re-render síncrono (via safeRender em app.js), então
+    // se o índice só avançasse depois, o re-render aconteceria mostrando
+    // ainda o card antigo — travando a revisão sempre no primeiro card.
     session.index++;
+    playFeedbackSound(gradeValue !== GRADES.AGAIN);
+    scheduleNext(card, gradeValue);
+    store.updateFlashcard(card.id, { srs: card.srs });
+    store.logStudyDay({ correct: gradeValue !== GRADES.AGAIN });
+    store.markFlashcardReviewedToday();
   };
-  container.querySelector("#btn-errei").addEventListener("click", (e) => {
-    e.stopPropagation();
-    grade("errou");
-  });
-  container.querySelector("#btn-acertei").addEventListener("click", (e) => {
-    e.stopPropagation();
-    grade("acertou");
+  container.querySelectorAll("[data-grade]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      grade(Number(btn.dataset.grade));
+    });
   });
 }

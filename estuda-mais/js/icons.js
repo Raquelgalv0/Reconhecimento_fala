@@ -54,6 +54,16 @@ const PATHS = {
   music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   chevronLeft: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
   chevronRight: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
+  alignLeft: '<path d="M4 6.5h16"/><path d="M4 12h10"/><path d="M4 17.5h13"/>',
+  alignCenter: '<path d="M4 6.5h16"/><path d="M7 12h10"/><path d="M5.5 17.5h13"/>',
+  alignRight: '<path d="M4 6.5h16"/><path d="M10 12h10"/><path d="M7 17.5h13"/>',
+  alignJustify: '<path d="M4 6.5h16"/><path d="M4 12h16"/><path d="M4 17.5h16"/>',
+  indentIncrease: '<path d="M10 6h10"/><path d="M10 12h10"/><path d="M10 18h10"/><path d="M4 9 7.5 12 4 15"/>',
+  indentDecrease: '<path d="M10 6h10"/><path d="M10 12h10"/><path d="M10 18h10"/><path d="M7.5 9 4 12l3.5 3"/>',
+  lineSpacing: '<path d="M8 4.5v15"/><path d="M5.3 7.2 8 4.5l2.7 2.7"/><path d="M5.3 16.8 8 19.5l2.7-2.7"/><path d="M13 6.5h7"/><path d="M13 12h7"/><path d="M13 17.5h7"/>',
+  orderedList: '<path d="M9.5 6.5h10.5"/><path d="M9.5 12h10.5"/><path d="M9.5 17.5h10.5"/><text x="2.8" y="8.6" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">1</text><text x="2.8" y="14.1" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">2</text><text x="2.8" y="19.6" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">3</text>',
+  messageCircle: '<path d="M4 12.3a7.8 7.8 0 1 1 3.4 6.4L4 20l1.3-3.6a7.7 7.7 0 0 1-1.3-4.1z"/><path d="M8.5 11.5h7"/><path d="M8.5 14.5h4.5"/>',
+  send: '<path d="M4.5 11.5 19.5 4.5 12.5 19.5 10.3 13.2z"/><path d="M10.3 13.2 15.5 8"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {

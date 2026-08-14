@@ -43,6 +43,11 @@ export function selectAll(table, session) {
 export function insertRow(table, row, session) {
   return request(`/${table}`, { method: "POST", session, body: row, prefer: "return=representation" });
 }
+// PostgREST insere várias linhas de uma vez quando o body é um array — usado
+// pela importação de .apkg pra não disparar uma chamada de rede por card.
+export function insertRows(table, rows, session) {
+  return request(`/${table}`, { method: "POST", session, body: rows, prefer: "return=representation" });
+}
 export function updateRow(table, id, patch, session, idColumn = "id") {
   return request(`/${table}?${idColumn}=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",

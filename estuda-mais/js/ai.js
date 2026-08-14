@@ -65,10 +65,19 @@ export async function generateChecklistFromText(text, count = 8) {
 }
 
 // Gera até `count` questões de múltipla escolha a partir de um material.
-// style: "conceitual" (padrão) ou "clinico" (caso clínico, Modo Medicina).
-export async function generateQuestionsFromText(text, count = 3, style = "conceitual") {
-  const { questions } = await callAi("questions", { text, count, style });
+// style: "conceitual" (padrão), "clinico" ou "misto" (mistura os dois, Modo Medicina).
+// difficulty: "facil" | "medio" (padrão) | "dificil" | "misto" (mistura as três).
+export async function generateQuestionsFromText(text, count = 3, style = "conceitual", difficulty = "medio") {
+  const { questions } = await callAi("questions", { text, count, style, difficulty });
   return questions;
+}
+
+// Tira dúvidas em formato de chat — separado do "Gerar com IA" (que produz
+// conteúdo pro resumo). `messages` é o histórico [{role: "user"|"assistant", content}],
+// `contextText` (opcional) é o texto do resumo aberto, pra IA responder com base nele.
+export async function askAiTutor(messages, contextText) {
+  const { reply } = await callAi("chat", { messages, contextText });
+  return reply;
 }
 
 // Gera uma estrutura simples de mapa mental (tópico central + ramos).
