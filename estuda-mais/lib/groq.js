@@ -124,4 +124,8 @@ export async function callGroq({ apiKey, model, task, params }) {
   }
 }
 
-export const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+// llama-3.3-70b-versatile foi descontinuado pela Groq em 16/08/2026 — trocado
+// pelo substituto recomendado por eles (openai/gpt-oss-120b), mesma categoria
+// de tamanho/qualidade. Pra trocar sem mexer no código, defina GROQ_MODEL nas
+// variáveis de ambiente (Vercel ou .env.local).
+export const DEFAULT_MODEL = "openai/gpt-oss-120b";
