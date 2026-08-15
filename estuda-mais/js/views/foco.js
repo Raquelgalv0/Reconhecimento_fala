@@ -5,6 +5,7 @@ import { store } from "../store.js";
 import { showToast, playChime } from "../ui-utils.js";
 import { Icon } from "../icons.js";
 import { currentSpotifyUrl, promptSpotifyUrl, setSpotifyUrl } from "../spotify-player.js";
+import { villageState } from "../village.js";
 
 const STUDY_PRESETS = [15, 25, 50];
 const BREAK_PRESETS = [5, 10, 15];
@@ -41,11 +42,6 @@ function focusStreakDays(sessions) {
     else break;
   }
   return streak;
-}
-
-function sessionsToday(sessions) {
-  const todayKey = new Date().toISOString().slice(0, 10);
-  return sessions.filter((s) => new Date(s.builtAt).toISOString().slice(0, 10) === todayKey).length;
 }
 
 // Estado da sessão em andamento — não é dado do app (não entra no store),
@@ -133,11 +129,68 @@ function wireSpotifyControls(container) {
   if (removeBtn) removeBtn.addEventListener("click", () => setSpotifyUrl(null));
 }
 
+// Rotas de navegação pra onde cada construção "pertence" — clicar num nó da
+// vila leva direto pra função que o alimenta, junto com os mesmos parâmetros
+// que os botões da sidebar usam pra abrir aquela tela "zerada".
+const BUILDING_ROUTE_EXTRA = {
+  resumos: { activeSummaryId: null, activeFolderId: null },
+  flashcards: { activeDeckId: null, reviewing: false },
+  questoes: { activeQuestionFolderId: null, questionFilter: "all", practicing: false },
+  foco: {},
+  desempenho: {},
+};
+
+// 5 pontos ao redor de um centro (0-100, casando com o viewBox do SVG das
+// linhas) — a "constelação" da vila, com o personagem no meio.
+function pentagonPositions(count, radius = 34) {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (-90 + i * (360 / count)) * (Math.PI / 180);
+    return { x: 50 + radius * Math.cos(angle), y: 50 + radius * Math.sin(angle) };
+  });
+}
+
+function attrBarHtml(building) {
+  return `
+    <div class="village-attr">
+      <div class="village-attr-label"><span>${Icon(building.icon, { size: 12 })}${building.attr}</span><b>Nv ${building.level}</b></div>
+      <div class="village-attr-track"><div class="village-attr-fill village-attr-fill--${building.id}" style="width:${Math.round(building.progress * 100)}%"></div></div>
+    </div>`;
+}
+
+function villageHtml(vs) {
+  const positions = pentagonPositions(vs.buildings.length);
+  const lines = positions.map((p) => `<line x1="50" y1="50" x2="${p.x}" y2="${p.y}"></line>`).join("");
+  const nodes = vs.buildings
+    .map((b, i) => {
+      const p = positions[i];
+      return `
+        <button type="button" class="village-node" data-village-route="${b.route}" style="left:${p.x}%; top:${p.y}%;" title="${b.name} — nível ${b.level}. ${b.blurb}">
+          <span class="village-hex village-hex--${b.id}">${Icon(b.icon, { size: 20 })}</span>
+          <span class="village-node-level">Nv ${b.level}</span>
+          <span class="village-node-name">${b.name}</span>
+        </button>`;
+    })
+    .join("");
+
+  return `
+    <div class="panel village-map-card">
+      <h3>${Icon("map", { size: 16 })}<span>Sua Vila</span></h3>
+      <p class="village-map-hint">Cada construção sobe de nível sozinha, de acordo com a função que ela representa. Clique numa construção pra ir direto estudar ali.</p>
+      <div class="village-map">
+        <svg class="village-lines" viewBox="0 0 100 100" preserveAspectRatio="none">${lines}</svg>
+        <div class="village-node village-node--center" title="Nível geral do personagem">
+          <span class="village-hex village-hex--center">${Icon("star", { size: 22 })}</span>
+          <span class="village-node-level">Nv ${vs.character.level}</span>
+        </div>
+        ${nodes}
+      </div>
+    </div>`;
+}
+
 export function renderFoco(container) {
   const state = ensureFocoState();
-  const sessions = completedSessions();
-  const totalMinutes = sessions.reduce((sum, s) => sum + (s.minutes || 0), 0);
-  const streak = focusStreakDays(sessions);
+  const streak = focusStreakDays(completedSessions());
+  const vs = villageState();
 
   container.innerHTML = `
     <div class="main-header">
@@ -147,27 +200,38 @@ export function renderFoco(container) {
       </div>
       ${streak > 0 ? `<div class="focus-streak-badge">${Icon("flame", { size: 15 })}<span>${streak} dia${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</span></div>` : ""}
     </div>
+    <div class="panel village-banner">
+      <div class="village-avatar">
+        <span class="village-hex village-hex--avatar">${Icon("star", { size: 26 })}</span>
+        <span class="village-avatar-level">${vs.character.level}</span>
+      </div>
+      <div class="village-banner-body">
+        <div class="village-banner-head">
+          <h2>${vs.className}</h2>
+          <span class="village-banner-sub">Nível ${vs.character.level} · ${vs.character.xp} XP no total</span>
+        </div>
+        <div class="village-attrs">
+          ${vs.buildings.map(attrBarHtml).join("")}
+        </div>
+      </div>
+    </div>
     <div class="focus-layout">
       <div class="panel focus-timer-card">
         ${spotifyStatusHtml()}
         ${focusStageHtml(state)}
       </div>
-      <div class="panel pomo-stats-card">
-        <h3>${Icon("barChart", { size: 16 })}<span>Seu progresso</span></h3>
-        <div class="pomo-stat-row"><span>${Icon("checkPlain", { size: 13 })}Sessões hoje</span><b>${sessionsToday(sessions)}</b></div>
-        <div class="pomo-stat-row"><span>${Icon("flame", { size: 13 })}Sessões no total</span><b>${sessions.length}</b></div>
-        <div class="pomo-stat-row"><span>${Icon("clock", { size: 13 })}Minutos focados</span><b>${totalMinutes}</b></div>
-        <div class="pomo-stat-row"><span>${Icon("trendingUp", { size: 13 })}Sequência</span><b>${streak} dia${streak === 1 ? "" : "s"}</b></div>
-        <div class="pomo-cycle-hint">
-          <span>Ciclo atual</span>
-          ${cycleDotsHtml(state.cycleCount)}
-        </div>
-      </div>
+      ${villageHtml(vs)}
     </div>
   `;
 
   wireSpotifyControls(container);
   wireStage(container, state);
+  container.querySelectorAll("[data-village-route]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const route = btn.dataset.villageRoute;
+      store.setRoute(route, BUILDING_ROUTE_EXTRA[route] || {});
+    });
+  });
 }
 
 function focusStageHtml(state) {
