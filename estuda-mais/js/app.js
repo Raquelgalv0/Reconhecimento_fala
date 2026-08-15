@@ -9,7 +9,17 @@ import { renderFoco } from "./views/foco.js";
 import { renderAssuntos } from "./views/assuntos.js";
 import { Icon } from "./icons.js";
 import { openModal, closeModal, showToast } from "./ui-utils.js";
-import { signUp, signIn, signOut, getValidSession, getCachedUser } from "./auth.js";
+import {
+  signUp,
+  signIn,
+  signOut,
+  getValidSession,
+  getCachedUser,
+  requestPasswordReset,
+  getRecoveryTokensFromUrl,
+  clearRecoveryHash,
+  completePasswordRecovery,
+} from "./auth.js";
 import { mountSpotifyPlayer } from "./spotify-player.js";
 import { mountAiChat } from "./ai-chat.js";
 import { MODES, MODE_TAG } from "./modes.js";
@@ -27,6 +37,13 @@ function renderLoadingScreen(message) {
 }
 
 async function boot() {
+  // Voltando do link de recuperação de senha do e-mail (tokens temporários
+  // na hash da URL) — antes de qualquer outra coisa, pede a senha nova.
+  const recoveryTokens = getRecoveryTokensFromUrl();
+  if (recoveryTokens) {
+    renderResetPasswordScreen(recoveryTokens);
+    return;
+  }
   const session = await getValidSession();
   if (!session) {
     renderAuthScreen();
@@ -44,26 +61,39 @@ async function boot() {
 }
 
 function renderAuthScreen() {
-  let mode = "signin"; // ou "signup"
+  let mode = "signin"; // "signin" | "signup" | "forgot"
+
+  const TITLES = { signin: "Entrar na sua conta", signup: "Criar sua conta", forgot: "Redefinir senha" };
+  const SUBS = {
+    signin: "Acesse com seu e-mail e senha.",
+    signup: "Leva menos de um minuto.",
+    forgot: "Informe seu e-mail — mandamos um link pra você criar uma senha nova.",
+  };
+  const SUBMIT_LABELS = { signin: "Entrar", signup: "Criar conta", forgot: "Enviar link de redefinição" };
 
   function render() {
     appRoot.innerHTML = `
       <div class="onboarding-overlay">
         <div class="onboarding-card">
           <div class="onboarding-step">HiperNotes</div>
-          <h1>${mode === "signin" ? "Entrar na sua conta" : "Criar sua conta"}</h1>
-          <p>${mode === "signin" ? "Acesse com seu e-mail e senha." : "Leva menos de um minuto."}</p>
+          <h1>${TITLES[mode]}</h1>
+          <p>${SUBS[mode]}</p>
           <div id="auth-error-slot"></div>
           <div class="field">
             <label>${Icon("mail", { size: 12 })} E-mail</label>
             <input type="email" id="auth-email" placeholder="voce@email.com" autocomplete="email" />
           </div>
-          <div class="field">
-            <label>${Icon("lock", { size: 12 })} Senha</label>
-            <input type="password" id="auth-password" placeholder="••••••••" autocomplete="${mode === "signin" ? "current-password" : "new-password"}" />
-          </div>
+          ${
+            mode === "forgot"
+              ? ""
+              : `<div class="field">
+                  <label>${Icon("lock", { size: 12 })} Senha</label>
+                  <input type="password" id="auth-password" placeholder="••••••••" autocomplete="${mode === "signin" ? "current-password" : "new-password"}" />
+                </div>
+                ${mode === "signin" ? `<button type="button" class="auth-switch auth-forgot-link" id="auth-forgot">Esqueci minha senha</button>` : ""}`
+          }
           <button class="btn btn-primary" id="auth-submit" style="width:100%; justify-content:center;">
-            ${mode === "signin" ? "Entrar" : "Criar conta"}
+            ${SUBMIT_LABELS[mode]}
           </button>
           <div class="auth-foot">
             ${
@@ -76,7 +106,11 @@ function renderAuthScreen() {
       </div>`;
 
     appRoot.querySelector("#auth-toggle").addEventListener("click", () => {
-      mode = mode === "signin" ? "signup" : "signin";
+      mode = mode === "signup" ? "signin" : "signup";
+      render();
+    });
+    appRoot.querySelector("#auth-forgot")?.addEventListener("click", () => {
+      mode = "forgot";
       render();
     });
 
@@ -86,9 +120,28 @@ function renderAuthScreen() {
 
     const submit = async () => {
       const email = emailEl.value.trim();
-      const password = passEl.value;
       const errorSlot = appRoot.querySelector("#auth-error-slot");
       errorSlot.innerHTML = "";
+
+      if (mode === "forgot") {
+        if (!email) {
+          errorSlot.innerHTML = `<div class="auth-error">Informe seu e-mail.</div>`;
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Enviando...";
+        try {
+          await requestPasswordReset(email);
+          errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#7a3b22;">Se esse e-mail tiver uma conta, chega um link pra redefinir a senha em instantes (confira o spam também).</div>`;
+        } catch (err) {
+          errorSlot.innerHTML = `<div class="auth-error">${escapeHtml(err.message)}</div>`;
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = SUBMIT_LABELS.forgot;
+        return;
+      }
+
+      const password = passEl.value;
       if (!email || !password) {
         errorSlot.innerHTML = `<div class="auth-error">Preencha e-mail e senha.</div>`;
         return;
@@ -102,7 +155,7 @@ function renderAuthScreen() {
         } else {
           const { needsEmailConfirmation } = await signUp(email, password);
           if (needsEmailConfirmation) {
-            errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#4b3fa0;">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
+            errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#7a3b22;">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
             submitBtn.disabled = false;
             submitBtn.textContent = "Criar conta";
             mode = "signin";
@@ -118,12 +171,73 @@ function renderAuthScreen() {
     };
 
     submitBtn.addEventListener("click", submit);
-    passEl.addEventListener("keydown", (e) => {
+    passEl?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") submit();
+    });
+    emailEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && mode === "forgot") submit();
     });
   }
 
   render();
+}
+
+// Tela que aparece quando a pessoa volta pro app pelo link do e-mail de
+// recuperação — define a senha nova e já entra direto, sem passar pelo login.
+function renderResetPasswordScreen(recoveryTokens) {
+  appRoot.innerHTML = `
+    <div class="onboarding-overlay">
+      <div class="onboarding-card">
+        <div class="onboarding-step">HiperNotes</div>
+        <h1>Criar nova senha</h1>
+        <p>Defina a nova senha da sua conta.</p>
+        <div id="auth-error-slot"></div>
+        <div class="field">
+          <label>${Icon("lock", { size: 12 })} Nova senha</label>
+          <input type="password" id="reset-password" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label>${Icon("lock", { size: 12 })} Confirmar nova senha</label>
+          <input type="password" id="reset-password-confirm" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary" id="reset-submit" style="width:100%; justify-content:center;">Salvar nova senha</button>
+      </div>
+    </div>`;
+
+  const passEl = appRoot.querySelector("#reset-password");
+  const confirmEl = appRoot.querySelector("#reset-password-confirm");
+  const submitBtn = appRoot.querySelector("#reset-submit");
+  const errorSlot = appRoot.querySelector("#auth-error-slot");
+
+  const submit = async () => {
+    errorSlot.innerHTML = "";
+    const password = passEl.value;
+    if (!password || password.length < 6) {
+      errorSlot.innerHTML = `<div class="auth-error">A senha precisa ter pelo menos 6 caracteres.</div>`;
+      return;
+    }
+    if (password !== confirmEl.value) {
+      errorSlot.innerHTML = `<div class="auth-error">As senhas não são iguais.</div>`;
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Salvando...";
+    try {
+      await completePasswordRecovery(recoveryTokens, password);
+      clearRecoveryHash();
+      showToast("Senha atualizada! Você já está logada.", "check");
+      boot();
+    } catch (err) {
+      errorSlot.innerHTML = `<div class="auth-error">${escapeHtml(err.message)}</div>`;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Salvar nova senha";
+    }
+  };
+
+  submitBtn.addEventListener("click", submit);
+  confirmEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
 }
 
 const TIME_OPTIONS = [
