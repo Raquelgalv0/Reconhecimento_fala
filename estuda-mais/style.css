@@ -17,47 +17,12 @@
   --green-soft: #edf0e1;
   --red: #a34434;
   --red-soft: #f5e3de;
-  --medicina-soft: #e3f4f4;
-  --medicina-ink: #1f7f84;
-  --medicina-border: #bfe3e3;
-  --medicina-dash: #d9ece9;
-  --accent-ink-soft: #7a3b22;
-  --hover-border: #e3c3ac;
   --font-serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow-1: 0 1px 2px rgba(42, 32, 24, 0.05), 0 1px 1px rgba(42, 32, 24, 0.03);
-  --shadow-2: 0 6px 20px rgba(42, 32, 24, 0.10), 0 2px 6px rgba(42, 32, 24, 0.06);
-}
-
-/* Modo escuro — mesma sidebar espresso de sempre, mas o conteúdo principal
-   (que era creme) vira escuro também. Ativado via data-theme no <html>,
-   trocado pelo botão de sol/lua na sidebar (js/theme.js). */
-:root[data-theme="dark"] {
-  --bg: #1d150e;
-  --bg-elevated: #271d14;
-  --ink: #f0e6d8;
-  --ink-soft: #b9ab97;
-  --ink-faint: #8a7c68;
-  --border: #3a2c1e;
-  --accent: #d97a52;
-  --accent-hover: #e8926c;
-  --accent-soft: #3d2a1f;
-  --amber: #d9a24a;
-  --amber-soft: #3a2f1c;
-  --green: #a3ad74;
-  --green-soft: #2c2f1e;
-  --red: #d1685a;
-  --red-soft: #3a231f;
-  --medicina-soft: #17302e;
-  --medicina-ink: #6fd0d6;
-  --medicina-border: #2a4c4a;
-  --medicina-dash: #2a4c4a;
-  --accent-ink-soft: #f0c4a8;
-  --hover-border: #6b4530;
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px 1px rgba(0, 0, 0, 0.15);
-  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --shadow-1: 0 1px 2px rgba(34, 28, 44, 0.05), 0 1px 1px rgba(34, 28, 44, 0.03);
+  --shadow-2: 0 6px 20px rgba(34, 28, 44, 0.10), 0 2px 6px rgba(34, 28, 44, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -236,8 +201,8 @@ input, textarea, select {
 .main-header p.sub { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
 
 .medicina-banner {
-  display: flex; align-items: center; gap: 9px; background: var(--medicina-soft); color: var(--medicina-ink);
-  border: 1px solid var(--medicina-border); border-radius: 12px; padding: 11px 16px; font-size: 13.5px; font-weight: 600;
+  display: flex; align-items: center; gap: 9px; background: #e3f4f4; color: #1f7f84;
+  border: 1px solid #bfe3e3; border-radius: 12px; padding: 11px 16px; font-size: 13.5px; font-weight: 600;
   margin-bottom: 22px;
 }
 
@@ -399,7 +364,7 @@ input, textarea, select {
   background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 14px 16px; cursor: pointer; transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.question-card:hover { box-shadow: var(--shadow-1); border-color: var(--hover-border); }
+.question-card:hover { box-shadow: var(--shadow-1); border-color: #e3c3ac; }
 .q-star {
   flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
   color: var(--ink-faint); margin-top: 1px;
@@ -566,15 +531,15 @@ input, textarea, select {
 
 /* caso clínico (Modo Medicina) */
 .clinical-case {
-  border: 1.5px solid var(--medicina-border); border-radius: 12px; overflow: hidden; margin: 14px 0; background: var(--bg-elevated);
+  border: 1.5px solid #bfe3e3; border-radius: 12px; overflow: hidden; margin: 14px 0; background: #fff;
 }
 .cc-header {
-  display: flex; align-items: center; gap: 7px; background: var(--medicina-soft); color: var(--medicina-ink);
+  display: flex; align-items: center; gap: 7px; background: #e3f4f4; color: #1f7f84;
   font-weight: 700; font-size: 13px; padding: 10px 16px;
 }
-.cc-field { padding: 10px 16px; border-top: 1px dashed var(--medicina-dash); }
-.cc-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--medicina-ink); margin-bottom: 3px; }
-.cc-field p { margin: 0; font-size: 13.5px; color: var(--ink); }
+.cc-field { padding: 10px 16px; border-top: 1px dashed #d9ece9; }
+.cc-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #2f9ea3; margin-bottom: 3px; }
+.cc-field p { margin: 0; font-size: 13.5px; }
 
 /* ---------- Resumos ---------- */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
@@ -587,7 +552,7 @@ input, textarea, select {
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.summary-card:hover { box-shadow: var(--shadow-2); border-color: var(--hover-border); }
+.summary-card:hover { box-shadow: var(--shadow-2); border-color: #e3c3ac; }
 .summary-card-delete {
   position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center; color: var(--ink-faint);
@@ -716,17 +681,17 @@ input, textarea, select {
   color: var(--ink-faint);
 }
 .editor-body.eraser-mode {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg transform='rotate(-25 14 14)'%3E%3Crect x='6' y='9' width='16' height='10' rx='2.5' fill='%23f6c9dd' stroke='%23b5573c' stroke-width='1.5'/%3E%3Crect x='6' y='9' width='16' height='4' rx='2.5' fill='white' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") 8 22, auto;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg transform='rotate(-25 14 14)'%3E%3Crect x='6' y='9' width='16' height='10' rx='2.5' fill='%23f6c9dd' stroke='%235b3f82' stroke-width='1.5'/%3E%3Crect x='6' y='9' width='16' height='4' rx='2.5' fill='white' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") 8 22, auto;
 }
 .editor-body.eraser-mode mark:not(.linked-fc):hover,
 .editor-body.eraser-mode span[style*="background-color"]:hover,
 .editor-body.eraser-mode font[style*="background-color"]:hover {
   outline: 2px dashed #a34434;
   outline-offset: 1px;
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg transform='rotate(-25 14 14)'%3E%3Crect x='6' y='9' width='16' height='10' rx='2.5' fill='%23f6c9dd' stroke='%23b5573c' stroke-width='1.5'/%3E%3Crect x='6' y='9' width='16' height='4' rx='2.5' fill='white' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") 8 22, auto;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg transform='rotate(-25 14 14)'%3E%3Crect x='6' y='9' width='16' height='10' rx='2.5' fill='%23f6c9dd' stroke='%235b3f82' stroke-width='1.5'/%3E%3Crect x='6' y='9' width='16' height='4' rx='2.5' fill='white' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") 8 22, auto;
 }
 .editor-body h2 { font-family: var(--font-serif); font-size: 21px; margin: 22px 0 8px; }
-.editor-body h3 { font-family: var(--font-serif); font-size: 17px; margin: 18px 0 6px; color: var(--accent-ink-soft); }
+.editor-body h3 { font-family: var(--font-serif); font-size: 17px; margin: 18px 0 6px; color: #7a3b22; }
 .editor-body p { margin: 0 0 12px; }
 .editor-body a { color: var(--accent); }
 .editor-body img { max-width: 100%; border-radius: 10px; margin: 10px 0; }
@@ -770,9 +735,7 @@ mark.hl-azul { background: #c7dcf7; }
 
 /* code block */
 .code-block {
-  /* fundo sempre escuro, tipo editor de código — não usa var(--ink) de
-     propósito, porque no modo escuro --ink vira claro e inverteria isso */
-  background: #2a2018; color: #efe7da; border-radius: 10px; padding: 14px 16px;
+  background: var(--ink); color: #efe7da; border-radius: 10px; padding: 14px 16px;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13.5px;
   line-height: 1.6; overflow-x: auto; margin: 14px 0; white-space: pre-wrap;
 }
@@ -781,7 +744,7 @@ mark.hl-azul { background: #c7dcf7; }
 .callout {
   display: flex; gap: 10px; align-items: flex-start; margin: 14px 0;
   background: var(--accent-soft); border-left: 3px solid var(--accent);
-  border-radius: 0 10px 10px 0; padding: 12px 14px; color: var(--accent-ink-soft);
+  border-radius: 0 10px 10px 0; padding: 12px 14px; color: #7a3b22;
 }
 .callout .callout-icon { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
 
@@ -791,10 +754,6 @@ mark.hl-azul { background: #c7dcf7; }
 .columns .column:first-child { border-left: none; padding-left: 0; }
 
 /* --- Page styles (visual templates, content is unaffected) --- */
-/* São "papel" — fundo e texto ficam fixos independente do tema do app
-   (mesma lógica de um papel de verdade: continua branco/creme numa sala
-   escura). Só o "Padrão" (sem classe extra, page-style--a4) segue o tema,
-   porque não tem fundo próprio. */
 .page-style--a4 {
   max-width: 760px; margin: 0 auto; padding-left: 60px; padding-right: 60px;
   box-shadow: inset 0 0 0 1px var(--border);
@@ -807,7 +766,6 @@ mark.hl-azul { background: #c7dcf7; }
   padding-left: 78px;
   padding-top: 8px;
   line-height: 28px;
-  color: #2a2018;
 }
 .page-style--caderno p, .page-style--caderno li, .page-style--caderno blockquote {
   line-height: 28px;
@@ -818,7 +776,6 @@ mark.hl-azul { background: #c7dcf7; }
   background-image: repeating-linear-gradient(to bottom, transparent 0 30px, #f7c6d9 30px 31px);
   padding-top: 9px;
   line-height: 31px;
-  color: #2a2018;
 }
 .page-style--pautada p, .page-style--pautada li, .page-style--pautada blockquote {
   line-height: 31px;
@@ -828,23 +785,20 @@ mark.hl-azul { background: #c7dcf7; }
   background-color: #fff;
   background-image: radial-gradient(circle, #d9dbe9 1.1px, transparent 1.6px);
   background-size: 22px 22px;
-  color: #2a2018;
 }
 .page-style--pastel {
   background: linear-gradient(160deg, #f5f1ff 0%, #fdf3fb 100%);
-  color: #2a2018;
 }
 .page-style--pastel h2, .page-style--pastel h3 { color: #8a6fd8; }
 .page-style--medicina {
   background: #fff; border-left: 4px solid #2f9ea3; padding-left: 32px;
-  color: #2a2018;
 }
 .page-style--medicina h2, .page-style--medicina h3 { color: #1f7f84; }
-.page-style--concurso { background: #f7f7fb; color: #2a2018; }
-.page-style--concurso h2, .page-style--concurso h3 { border-bottom: 2px solid #2a2018; padding-bottom: 5px; display: inline-block; }
-.page-style--enem { background: #fffaf2; color: #2a2018; }
+.page-style--concurso { background: #f7f7fb; }
+.page-style--concurso h2, .page-style--concurso h3 { border-bottom: 2px solid var(--ink); padding-bottom: 5px; display: inline-block; }
+.page-style--enem { background: #fffaf2; }
 .page-style--enem h2, .page-style--enem h3 { color: #c97a2b; }
-.page-style--fichamento { background: #fbf8f2; color: #2a2018; }
+.page-style--fichamento { background: #fbf8f2; }
 .page-style--fichamento blockquote { font-family: var(--font-serif); font-size: 17px; }
 
 /* --- Font styles (typeface per resumo, independent from the page style) --- */
@@ -886,7 +840,7 @@ mark.hl-azul { background: #c7dcf7; }
 }
 .cornell-cue { grid-area: cue; background: var(--accent-soft); padding: 16px; border-right: 1px solid var(--border); font-size: 13px; color: var(--ink-soft); }
 .cornell-notes { grid-area: notes; padding: 16px; border-bottom: 1px solid var(--border); min-height: 240px; }
-.cornell-summary { grid-area: summary; padding: 14px 16px; background: #faf9fc; font-size: 13.5px; color: #2a2018; }
+.cornell-summary { grid-area: summary; padding: 14px 16px; background: #faf9fc; font-size: 13.5px; }
 .cornell-layout p:last-child { margin-bottom: 0; }
 
 /* page-style picker modal */
@@ -930,7 +884,7 @@ mark.hl-azul { background: #c7dcf7; }
   display: none;
   align-items: center;
   gap: 4px;
-  background: #2a2018; /* fixo, mesmo motivo do .code-block */
+  background: var(--ink);
   color: #fff;
   border-radius: 10px;
   padding: 6px;
@@ -955,7 +909,7 @@ mark.hl-azul { background: #c7dcf7; }
   padding: 16px 17px;
   cursor: pointer;
 }
-.deck-card:hover { box-shadow: var(--shadow-2); border-color: var(--hover-border); }
+.deck-card:hover { box-shadow: var(--shadow-2); border-color: #e3c3ac; }
 .deck-card .deck-name { font-family: var(--font-serif); font-size: 15px; margin-bottom: 10px; }
 .deck-card .deck-stats { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--ink-soft); }
 .deck-card .due-pill { background: var(--amber-soft); color: var(--amber); padding: 2px 8px; border-radius: 999px; font-weight: 700; }
@@ -983,7 +937,7 @@ mark.hl-azul { background: #c7dcf7; }
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.assunto-card:hover { box-shadow: var(--shadow-2); border-color: var(--hover-border); }
+.assunto-card:hover { box-shadow: var(--shadow-2); border-color: #e3c3ac; }
 .assunto-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .assunto-card-icon { color: var(--accent); }
 .assunto-card h4 { font-family: var(--font-serif); font-size: 15px; margin: 0 0 6px; }
@@ -1229,7 +1183,7 @@ mark.hl-azul { background: #c7dcf7; }
 
 .focus-phrase {
   display: flex; align-items: center; gap: 7px; justify-content: center; text-align: left;
-  background: var(--accent-soft); color: var(--accent-ink-soft); font-size: 12.5px; font-weight: 600;
+  background: var(--accent-soft); color: #7a3b22; font-size: 12.5px; font-weight: 600;
   border-radius: 10px; padding: 9px 12px; margin-top: 4px;
 }
 
@@ -1325,7 +1279,7 @@ mark.hl-azul { background: #c7dcf7; }
 
 /* ---------- Modal ---------- */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(30, 22, 15, 0.5);
+  position: fixed; inset: 0; background: rgba(32, 26, 46, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   backdrop-filter: blur(2px);
 }
@@ -1350,7 +1304,7 @@ mark.hl-azul { background: #c7dcf7; }
 .field-hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; }
 .field-hint--warning { color: var(--red); font-weight: 600; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-.ai-source-note { display: flex; gap: 8px; align-items: flex-start; background: var(--accent-soft); color: var(--accent-ink-soft); font-size: 12px; border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; }
+.ai-source-note { display: flex; gap: 8px; align-items: flex-start; background: var(--accent-soft); color: #7a3b22; font-size: 12px; border-radius: 10px; padding: 10px 12px; margin-bottom: 16px; }
 
 .checkbox-card {
   display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; margin-bottom: 10px;
@@ -1368,7 +1322,7 @@ mark.hl-azul { background: #c7dcf7; }
 /* ---------- Toast ---------- */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: #2a2018; color: #fff; padding: 12px 20px; border-radius: 12px; /* fixo, mesmo motivo do .code-block */
+  background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 12px;
   font-size: 13.5px; box-shadow: var(--shadow-2); z-index: 200;
   opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
   display: flex; align-items: center; gap: 8px;
@@ -1424,16 +1378,6 @@ mark.hl-azul { background: #c7dcf7; }
   .page-style-btn { margin-left: 0; }
   .main-header { flex-wrap: wrap; }
 }
-
-/* ---------- Modo escuro: exceções pontuais ----------
-   Só os poucos lugares que usavam uma cor fixa em vez de um token de
-   :root (então não seguiriam o tema sozinhos). O resto do app já se
-   adapta automaticamente porque está todo em var(--bg), var(--ink) etc. */
-:root[data-theme="dark"] .flip-face.back { background: #3d2c20; }
-:root[data-theme="dark"] .grade-btn--again:hover { background: #4a2c26; }
-:root[data-theme="dark"] .grade-btn--hard:hover { background: #4a3c22; }
-:root[data-theme="dark"] .grade-btn--good:hover { background: #4a3226; }
-:root[data-theme="dark"] .grade-btn--easy:hover { background: #3a3d26; }
 
 /* ---------- Exportar resumo (imprimir / salvar como PDF) ---------- */
 @media print {

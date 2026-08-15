@@ -23,7 +23,6 @@ import {
 import { mountSpotifyPlayer } from "./spotify-player.js";
 import { mountAiChat } from "./ai-chat.js";
 import { MODES, MODE_TAG } from "./modes.js";
-import { getTheme, toggleTheme } from "./theme.js";
 
 const appRoot = document.getElementById("app");
 
@@ -133,7 +132,7 @@ function renderAuthScreen() {
         submitBtn.textContent = "Enviando...";
         try {
           await requestPasswordReset(email);
-          errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:var(--accent-ink-soft);">Se esse e-mail tiver uma conta, chega um link pra redefinir a senha em instantes (confira o spam também).</div>`;
+          errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#7a3b22;">Se esse e-mail tiver uma conta, chega um link pra redefinir a senha em instantes (confira o spam também).</div>`;
         } catch (err) {
           errorSlot.innerHTML = `<div class="auth-error">${escapeHtml(err.message)}</div>`;
         }
@@ -156,7 +155,7 @@ function renderAuthScreen() {
         } else {
           const { needsEmailConfirmation } = await signUp(email, password);
           if (needsEmailConfirmation) {
-            errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:var(--accent-ink-soft);">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
+            errorSlot.innerHTML = `<div class="auth-error" style="background:var(--accent-soft); color:#7a3b22;">Conta criada! Verifique seu e-mail para confirmar antes de entrar.</div>`;
             submitBtn.disabled = false;
             submitBtn.textContent = "Criar conta";
             mode = "signin";
@@ -432,19 +431,11 @@ function renderSidebar(sidebarEl) {
     </div>
 
     <div class="sidebar-footer">
-      <button class="icon-btn" id="theme-toggle-btn" title="${getTheme() === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}">${Icon(getTheme() === "dark" ? "sun" : "moon", { size: 12 })}</button>
       <button class="icon-btn" id="edit-profile-btn" title="Editar perfil">${Icon("pencil", { size: 12 })}</button>
       <button class="icon-btn" id="logout-btn" title="Sair${getCachedUser()?.email ? ` (${getCachedUser().email})` : ""}">${Icon("logOut", { size: 12 })}</button>
       <span>${store.state.profile?.name ? `Olá, ${escapeHtml(store.state.profile.name)}` : "Resumos e flashcards sincronizados"} · revisão espaçada Acertei/Errei</span>
     </div>
   `;
-
-  sidebarEl.querySelector("#theme-toggle-btn").addEventListener("click", () => {
-    const next = toggleTheme();
-    const btn = sidebarEl.querySelector("#theme-toggle-btn");
-    btn.title = next === "dark" ? "Ativar modo claro" : "Ativar modo escuro";
-    btn.innerHTML = Icon(next === "dark" ? "sun" : "moon", { size: 12 });
-  });
 
   sidebarEl.querySelector("#logout-btn").addEventListener("click", async () => {
     if (!confirm("Sair da sua conta?")) return;
