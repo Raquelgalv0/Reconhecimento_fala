@@ -740,11 +740,11 @@ class Store {
     );
   }
 
-  // ---- Cidade de foco (cada sessão de estudo concluída ergue um prédio na
-  // cidade isométrica da tela de Foco). "kind" não influencia mais a
-  // aparência do prédio (isso hoje é calculado por posição na lista, em
-  // foco.js) — o campo só continua existindo pra bater com a coluna já
-  // criada no banco (not null).
+  // ---- Log de sessões de foco (Pomodoro) — cada bloco de estudo concluído
+  // vira uma linha aqui, usada pras estatísticas da tela de Foco (sessões,
+  // minutos, sequência de dias). Os nomes "city"/"building"/"kind" são
+  // resquício de uma versão antiga com tema de cidade; mantidos porque já
+  // batem com a tabela criada no banco (mudar exigiria migração).
   addCityBuilding(minutes) {
     const building = {
       id: uid("city"),
@@ -758,7 +758,7 @@ class Store {
       "city_buildings",
       { id: building.id, user_id: this.userId, kind: building.kind, minutes, built_at: building.builtAt },
       this.session
-    ).catch((err) => reportSyncError("salvar a construção", err));
+    ).catch((err) => reportSyncError("salvar a sessão de foco", err));
     return building;
   }
 

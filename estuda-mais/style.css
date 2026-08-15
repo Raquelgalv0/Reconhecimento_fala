@@ -1164,113 +1164,44 @@ mark.hl-azul { background: #c7dcf7; }
 .focus-ring-fg { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.25s linear; }
 .focus-ring-wrap.is-break .focus-ring-fg { stroke: var(--green); }
 .focus-countdown { font-family: var(--font-serif); font-size: 40px; font-weight: 600; color: var(--ink); position: relative; z-index: 1; }
-.focus-countdown--sm { font-size: 26px; margin-top: -4px; }
-
-.construction-scene {
-  width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
-  background:
-    repeating-linear-gradient(0deg, rgba(181, 87, 60, 0.06) 0 1px, transparent 1px 12px),
-    repeating-linear-gradient(90deg, rgba(181, 87, 60, 0.06) 0 1px, transparent 1px 12px),
-    var(--bg-elevated);
-}
-.construction-svg { display: block; width: 100%; height: 160px; }
-.cs-ground { stroke: var(--accent); stroke-opacity: 0.3; stroke-width: 1.5; }
-.cs-outline { fill: none; stroke: var(--accent); stroke-opacity: 0.35; stroke-width: 1.5; stroke-dasharray: 3 3; }
-.cs-fill { transition: none; }
-
-.focus-progress-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
-.focus-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--amber)); border-radius: 999px; transition: width 0.25s linear; }
 
 .focus-phrase {
   display: flex; align-items: center; gap: 7px; justify-content: center; text-align: left;
-  background: var(--accent-soft); color: #7a3b22; font-size: 12.5px; font-weight: 600;
+  background: var(--accent-soft); color: var(--accent-ink-soft, var(--accent)); font-size: 12.5px; font-weight: 600;
   border-radius: 10px; padding: 9px 12px; margin-top: 4px;
 }
 
 .focus-done { padding: 10px 0; }
-.focus-done-house { position: relative; display: flex; justify-content: center; margin-bottom: 10px; }
-.focus-done-house svg { animation: house-bounce-in 0.5s cubic-bezier(.34,1.56,.64,1); }
+.focus-done-icon {
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;
+  width: 56px; height: 56px; border-radius: 50%; background: var(--green-soft); color: var(--green);
+  animation: focus-done-pop 0.4s cubic-bezier(.34,1.56,.64,1);
+}
 .focus-done h3 { margin: 0 0 6px; font-family: var(--font-serif); }
 
-.confetti { position: absolute; inset: -10px -30px auto -30px; height: 60px; pointer-events: none; }
-.confetti-piece {
-  position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; border-radius: 1px;
-  animation: confetti-burst 0.9s ease-out forwards;
+/* Painel de progresso — estatísticas simples, sem tema de cidade. */
+.pomo-stats-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 15px; }
+.pomo-stat-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--ink-soft);
 }
-.confetti-piece.c0 { background: var(--accent); }
-.confetti-piece.c1 { background: var(--amber); }
-.confetti-piece.c2 { background: var(--green); }
-.confetti-piece.c3 { background: #e08fae; }
-.confetti-piece.c4 { background: #6fa8dc; }
-.confetti-piece:nth-child(1) { --tx: -60px; --ty: -50px; }
-.confetti-piece:nth-child(2) { --tx: -40px; --ty: -65px; animation-delay: 0.02s; }
-.confetti-piece:nth-child(3) { --tx: -15px; --ty: -70px; animation-delay: 0.04s; }
-.confetti-piece:nth-child(4) { --tx: 15px; --ty: -70px; animation-delay: 0.01s; }
-.confetti-piece:nth-child(5) { --tx: 40px; --ty: -65px; animation-delay: 0.05s; }
-.confetti-piece:nth-child(6) { --tx: 60px; --ty: -50px; animation-delay: 0.03s; }
-.confetti-piece:nth-child(7) { --tx: -50px; --ty: -20px; animation-delay: 0.06s; }
-.confetti-piece:nth-child(8) { --tx: 50px; --ty: -20px; animation-delay: 0.07s; }
-.confetti-piece:nth-child(9) { --tx: -25px; --ty: -35px; animation-delay: 0.08s; }
-.confetti-piece:nth-child(10) { --tx: 25px; --ty: -35px; animation-delay: 0.02s; }
-
-.city-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.city-card-header h3 { margin: 0; }
-.city-level-badge {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
-  color: var(--accent); background: var(--accent-soft); padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+.pomo-stat-row:last-of-type { border-bottom: none; }
+.pomo-stat-row span { display: flex; align-items: center; gap: 7px; }
+.pomo-stat-row b { font-family: var(--font-serif); font-size: 16px; color: var(--ink); }
+.pomo-cycle-hint {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 14px; font-size: 12px; color: var(--ink-faint);
 }
 
-/* Barra de status tipo HUD de simulador (população/fundos/nível) */
-.city-hud-bar {
-  display: flex; background: var(--bg-sidebar); border: 1px solid var(--bg-sidebar-hover);
-  border-radius: 10px; overflow: hidden; margin-bottom: 8px;
-}
-.hud-stat {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 8px 6px; color: #fff; border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-.hud-stat:last-child { border-right: none; }
-.hud-stat .icon { color: #d9ac6e; }
-.hud-stat span {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 15px; font-weight: 700; line-height: 1.15;
-}
-.hud-stat small { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.55); }
+/* As 4 bolinhas clássicas do Pomodoro — quantos blocos até a pausa longa. */
+.pomo-dots { display: flex; gap: 6px; }
+.pomo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.pomo-dot.is-done { background: var(--accent); }
 
-.city-level-hint { font-size: 11.5px; color: var(--ink-faint); margin-bottom: 12px; }
-
-.city-scene { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-
-/* Grade isométrica: cada prédio é posicionado via left/top calculado em JS
-   (projeção diamante col/linha), então aqui só cuidamos do fundo tipo
-   "quarteirão" e da animação de entrada de cada bloco. */
-.city-iso-grid {
-  position: relative; width: 100%; overflow: hidden;
-  background:
-    repeating-linear-gradient(28deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px 23px),
-    repeating-linear-gradient(-28deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px 23px),
-    linear-gradient(to bottom, #dcefd9, #c7e3c2);
-}
-.city-iso-tile {
-  position: absolute; line-height: 0; animation: house-pop 0.35s cubic-bezier(.34,1.56,.64,1) backwards;
-}
-.city-grid-note {
-  font-size: 11px; color: var(--ink-faint); text-align: center; padding: 6px 4px 2px;
-  background: #c7e3c2;
-}
-
-@keyframes house-pop {
-  from { transform: scale(0.3) translateY(10px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
-}
-@keyframes house-bounce-in {
+@keyframes focus-done-pop {
   0% { transform: scale(0); opacity: 0; }
   60% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); }
-}
-@keyframes confetti-burst {
-  0% { transform: translate(-50%, -50%) translate(0, 0) rotate(0deg); opacity: 1; }
-  100% { transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(200deg); opacity: 0; }
 }
 
 @media (max-width: 860px) {

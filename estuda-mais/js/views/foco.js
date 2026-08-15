@@ -1,7 +1,6 @@
-// Sessão de foco estilo SimCity: escolhe tempo de estudo e de pausa, e cada
-// sessão de estudo concluída ergue um prédio na sua cidade isométrica — vista
-// de cima, em bloco, tipo painel de simulador de cidade (população, minutos
-// focados, nível), em vez de uma cena fofa com mascote.
+// Sessão de foco no modelo clássico Pomodoro: estuda um bloco, faz uma
+// pausa curta, repete — e a cada 4 blocos completos, uma pausa longa. Sem
+// tema de cidade/construção; só o timer, o ciclo e o essencial.
 import { store } from "../store.js";
 import { showToast, playChime } from "../ui-utils.js";
 import { Icon } from "../icons.js";
@@ -9,6 +8,8 @@ import { currentSpotifyUrl, promptSpotifyUrl, setSpotifyUrl } from "../spotify-p
 
 const STUDY_PRESETS = [15, 25, 50];
 const BREAK_PRESETS = [5, 10, 15];
+const LONG_BREAK_PRESETS = [15, 20, 30];
+const CYCLES_PER_ROUND = 4; // clássico: a cada 4 sessões de foco, pausa longa
 
 // Frases curtas mostradas durante a sessão de estudo — um empurrãozinho
 // contra a maior distração de todas: o celular.
@@ -17,48 +18,34 @@ const FOCUS_PHRASES = [
   "Deixa o celular de lado — depois você confere.",
   "Uma notificação pode esperar. Seu foco, não.",
   "Você já começou. Não para agora.",
-  "Sua cidade só cresce com foco de verdade.",
   "Respira. Volta o olho pra tela. Segue firme.",
 ];
 function randomFocusPhrase() {
   return FOCUS_PHRASES[Math.floor(Math.random() * FOCUS_PHRASES.length)];
 }
 
-// Níveis da cidade — puramente cosmético, dá o "senso de progresso" tipo jogo.
-const CITY_LEVELS = [
-  { min: 0, label: "Terreno vazio", icon: "house" },
-  { min: 1, label: "Vila iniciante", icon: "house" },
-  { min: 5, label: "Cidadezinha", icon: "landmark" },
-  { min: 15, label: "Cidade grande", icon: "landmark" },
-  { min: 30, label: "Metrópole", icon: "landmark" },
-  { min: 60, label: "Megalópole dos estudos", icon: "landmark" },
-];
-
-function cityLevelInfo(count) {
-  let current = CITY_LEVELS[0];
-  let next = CITY_LEVELS[1];
-  for (let i = 0; i < CITY_LEVELS.length; i++) {
-    if (count >= CITY_LEVELS[i].min) {
-      current = CITY_LEVELS[i];
-      next = CITY_LEVELS[i + 1] || null;
-    }
-  }
-  const progress = next ? Math.min(100, Math.round(((count - current.min) / (next.min - current.min)) * 100)) : 100;
-  return { current, next, progress };
+// Sessões concluídas ficam no store (store.state.city / addCityBuilding —
+// nome legado do formato antigo, mas o dado em si é só "sessão concluída,
+// tantos minutos, tal hora", que continua servindo pras estatísticas aqui.
+function completedSessions() {
+  return store.state.city || [];
 }
 
-// Dias seguidos (incluindo hoje) com pelo menos 1 prédio construído — igual
-// espírito do streak de flashcard, mas calculado direto do array de prédios,
-// sem precisar guardar nada a mais.
-function focusStreakDays(city) {
-  const daysWithBuild = new Set(city.map((b) => new Date(b.builtAt).toISOString().slice(0, 10)));
+// Dias seguidos (incluindo hoje) com pelo menos 1 sessão concluída.
+function focusStreakDays(sessions) {
+  const daysWithSession = new Set(sessions.map((s) => new Date(s.builtAt).toISOString().slice(0, 10)));
   let streak = 0;
   for (let n = 0; ; n++) {
     const key = new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
-    if (daysWithBuild.has(key)) streak++;
+    if (daysWithSession.has(key)) streak++;
     else break;
   }
   return streak;
+}
+
+function sessionsToday(sessions) {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  return sessions.filter((s) => new Date(s.builtAt).toISOString().slice(0, 10) === todayKey).length;
 }
 
 // Estado da sessão em andamento — não é dado do app (não entra no store),
@@ -73,11 +60,14 @@ function focoKey() {
 function loadFocoState() {
   try {
     const raw = localStorage.getItem(focoKey());
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { longBreakMinutes: 20, cycleCount: 0, isLongBreak: false, ...parsed };
+    }
   } catch {
     // ignora
   }
-  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, endsAt: null };
+  return { phase: "idle", studyMinutes: 25, breakMinutes: 5, longBreakMinutes: 20, cycleCount: 0, isLongBreak: false, endsAt: null };
 }
 function saveFocoState() {
   try {
@@ -105,132 +95,10 @@ function formatMMSS(ms) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-// ---- Blocos isométricos (o "look" de simulador de cidade) ----
-// Cada prédio é desenhado como um bloco falso-3D (topo + duas paredes) via
-// polígonos SVG planos — sem transform 3D, então renderiza igual em qualquer
-// navegador. Quanto mais avançada a cidade, mais alto o prédio.
-const ISO_TILE_W = 46;
-const ISO_HH = 12; // metade da altura do losango do topo
-
-const ISO_TIERS = [
-  { top: "#f0d2a8", left: "#d9a35e", right: "#b3733a", bh: 16 },
-  { top: "#d9cdf0", left: "#9c85d1", right: "#5b3f82", bh: 24 },
-  { top: "#c9ecd6", left: "#7fd19c", right: "#2f9e6b", bh: 34 },
-  { top: "#cfe0f5", left: "#86a9d6", right: "#4d6fa3", bh: 48 },
-];
-
-function buildingTierIndex(count) {
-  if (count >= 30) return 3;
-  if (count >= 15) return 2;
-  if (count >= 5) return 1;
-  return 0;
-}
-
-function isoBuildingSvg(tierIdx, scale = 1) {
-  const t = ISO_TIERS[tierIdx] || ISO_TIERS[0];
-  const w = ISO_TILE_W;
-  const hh = ISO_HH;
-  const bh = t.bh;
-  const vh = 2 * hh + bh;
-  const edge = 'stroke="rgba(34,28,44,0.18)" stroke-width="0.6"';
-  const leftFace = `0,${hh} ${w / 2},${2 * hh} ${w / 2},${2 * hh + bh} 0,${hh + bh}`;
-  const rightFace = `${w / 2},${2 * hh} ${w},${hh} ${w},${hh + bh} ${w / 2},${2 * hh + bh}`;
-  const topFace = `${w / 2},0 ${w},${hh} ${w / 2},${2 * hh} 0,${hh}`;
-
-  let windows = "";
-  if (tierIdx >= 1) {
-    const n = tierIdx;
-    const step = bh / (n + 1);
-    for (let k = 1; k <= n; k++) {
-      const wy = (hh + step * k - 2.5).toFixed(1);
-      windows += `<rect x="${w / 2 + 6}" y="${wy}" width="5" height="5" rx="1" fill="#fbe8b8" opacity="0.85"/>`;
-    }
-  }
-  if (tierIdx >= 2) {
-    const wy = (hh + bh / 2 - 2.5).toFixed(1);
-    windows += `<rect x="6" y="${wy}" width="5" height="5" rx="1" fill="#fbe8b8" opacity="0.7"/>`;
-  }
-
-  const svg = `<svg viewBox="0 0 ${w} ${vh}" width="${(w * scale).toFixed(1)}" height="${(vh * scale).toFixed(1)}">
-    <polygon points="${leftFace}" fill="${t.left}" ${edge}/>
-    <polygon points="${rightFace}" fill="${t.right}" ${edge}/>
-    <polygon points="${topFace}" fill="${t.top}" ${edge}/>
-    ${windows}
-  </svg>`;
-  return { svg, w, vh, bh };
-}
-
-// Grade isométrica: coloca cada prédio numa posição "diamante" (col/linha)
-// pra imitar a câmera de topo/diagonal clássica dos sim-city. baseX generoso
-// evita que a matemática (col-row) dê posição negativa nas linhas de trás.
-const GRID_COLS = 6;
-const GRID_BASE_X = 300;
-const GRID_MAX_DISPLAY = 72;
-const GRID_OFFSET_Y = 72; // = vh do prédio mais alto (tier 3), garante top >= 0
-
-function isoTilePos(index) {
-  const row = Math.floor(index / GRID_COLS);
-  const col = index % GRID_COLS;
-  return {
-    x: GRID_BASE_X + (col - row) * (ISO_TILE_W / 2),
-    y: (col + row) * ISO_HH,
-  };
-}
-
-function cityIsoGridHtml(city) {
-  if (city.length === 0) {
-    return `<div class="empty-state" style="padding:26px 10px;"><div class="big">${Icon("landmark", { size: 26 })}</div>Sua cidade está vazia. Complete uma sessão de foco pra erguer o primeiro prédio.</div>`;
-  }
-  const hidden = Math.max(0, city.length - GRID_MAX_DISPLAY);
-  const visible = city.slice(hidden);
-  let maxY = 0;
-  const tiles = visible
-    .map((b, vi) => {
-      const originalIndex = hidden + vi;
-      const tierIdx = buildingTierIndex(originalIndex);
-      const { svg, w, vh } = isoBuildingSvg(tierIdx);
-      const { x, y } = isoTilePos(vi);
-      maxY = Math.max(maxY, y);
-      const left = (x - w / 2).toFixed(1);
-      const top = (GRID_OFFSET_Y + y - vh).toFixed(1);
-      const dateLabel = new Date(b.builtAt).toLocaleDateString("pt-BR");
-      return `<div class="city-iso-tile" style="left:${left}px;top:${top}px;animation-delay:${Math.min(vi, 24) * 0.025}s" title="${dateLabel} · ${b.minutes} min">${svg}</div>`;
-    })
-    .join("");
-  const containerHeight = Math.round(GRID_OFFSET_Y + maxY + 20);
-  const note =
-    hidden > 0
-      ? `<div class="city-grid-note">+${hidden} prédio${hidden === 1 ? "" : "s"} mais antigo${hidden === 1 ? "" : "s"} fora de vista</div>`
-      : "";
-  return `<div class="city-iso-grid" style="height:${containerHeight}px;">${tiles}</div>${note}`;
-}
-
-// ---- Cena de construção ao vivo (aparece durante a fase de estudo) ----
-// Elevação frontal (não isométrica) do mesmo prédio que vai entrar na
-// cidade — sobe do chão conforme o tempo passa, num fundo estilo planta
-// baixa/blueprint. As cores batem com os blocos isométricos (mesmo tom da
-// parede "right" de cada tier), pra cidade e canteiro de obras conversarem.
-const BUILDING_TIERS = [
-  { path: "M18,92 V60 L45,36 L72,60 V92 Z", color: ISO_TIERS[0].right, windows: [[30, 70, 8, 8], [52, 70, 8, 8]] },
-  { path: "M10,92 V48 L45,20 L80,48 V92 Z", color: ISO_TIERS[1].right, windows: [[26, 60, 9, 9], [55, 60, 9, 9], [26, 76, 9, 9], [55, 76, 9, 9]] },
-  { path: "M14,92 V38 L45,22 L76,38 V92 Z", color: ISO_TIERS[2].right, windows: [[22, 50, 8, 8], [42, 50, 8, 8], [62, 50, 8, 8], [22, 66, 8, 8], [42, 66, 8, 8], [62, 66, 8, 8]] },
-  { path: "M38,92 V12 H82 V92 Z", color: ISO_TIERS[3].right, windows: [[45, 22, 8, 8], [64, 22, 8, 8], [45, 38, 8, 8], [64, 38, 8, 8], [45, 54, 8, 8], [64, 54, 8, 8], [45, 70, 8, 8], [64, 70, 8, 8]] },
-];
-
-function constructionSceneHtml(count) {
-  const tier = BUILDING_TIERS[buildingTierIndex(count)];
-  return `
-    <div class="construction-scene">
-      <svg class="construction-svg" viewBox="0 0 120 100">
-        <line class="cs-ground" x1="2" y1="92" x2="118" y2="92"></line>
-        <path class="cs-outline" d="${tier.path}"></path>
-        <clipPath id="cs-clip"><rect id="foco-clip-rect" x="0" y="92" width="120" height="0"></rect></clipPath>
-        <g clip-path="url(#cs-clip)">
-          <path class="cs-fill" d="${tier.path}" fill="${tier.color}"></path>
-          ${tier.windows.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="#fbe8b8" opacity="0.85"></rect>`).join("")}
-        </g>
-      </svg>
-    </div>`;
+// 4 bolinhas mostrando quantas sessões de foco já foram completadas desde
+// a última pausa longa — o indicador de ciclo clássico do Pomodoro.
+function cycleDotsHtml(cycleCount) {
+  return `<div class="pomo-dots">${Array.from({ length: CYCLES_PER_ROUND }, (_, i) => `<span class="pomo-dot ${i < cycleCount ? "is-done" : ""}"></span>`).join("")}</div>`;
 }
 
 // ---- Playlist de foco ----
@@ -267,16 +135,15 @@ function wireSpotifyControls(container) {
 
 export function renderFoco(container) {
   const state = ensureFocoState();
-  const city = store.state.city || [];
-  const totalMinutes = city.reduce((sum, b) => sum + (b.minutes || 0), 0);
-  const { current, next, progress } = cityLevelInfo(city.length);
-  const streak = focusStreakDays(city);
+  const sessions = completedSessions();
+  const totalMinutes = sessions.reduce((sum, s) => sum + (s.minutes || 0), 0);
+  const streak = focusStreakDays(sessions);
 
   container.innerHTML = `
     <div class="main-header">
       <div>
         <h1>Foco</h1>
-        <p class="sub">Estude sem distração. Cada sessão concluída ergue um prédio na sua cidade.</p>
+        <p class="sub">Técnica Pomodoro: blocos de estudo intercalados com pausas curtas — e uma pausa longa a cada ${CYCLES_PER_ROUND} blocos.</p>
       </div>
       ${streak > 0 ? `<div class="focus-streak-badge">${Icon("flame", { size: 15 })}<span>${streak} dia${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</span></div>` : ""}
     </div>
@@ -285,23 +152,15 @@ export function renderFoco(container) {
         ${spotifyStatusHtml()}
         ${focusStageHtml(state)}
       </div>
-      <div class="panel focus-city-card">
-        <div class="city-card-header">
-          <h3>${Icon("landmark", { size: 16 })}<span>Sua cidade</span></h3>
-          <span class="city-level-badge">${Icon(current.icon, { size: 12 })}${current.label}</span>
-        </div>
-        <div class="city-hud-bar">
-          <div class="hud-stat">${Icon("house", { size: 13 })}<span>${city.length}</span><small>prédios</small></div>
-          <div class="hud-stat">${Icon("clock", { size: 13 })}<span>${totalMinutes}</span><small>min focados</small></div>
-          <div class="hud-stat">${Icon("trendingUp", { size: 13 })}<span>${progress}%</span><small>${next ? "próx. nível" : "nível máx."}</small></div>
-        </div>
-        ${
-          next
-            ? `<div class="city-level-hint">${next.min - city.length} prédio${next.min - city.length === 1 ? "" : "s"} pra virar "${next.label}"</div>`
-            : `<div class="city-level-hint">Nível máximo da cidade — você é imparável.</div>`
-        }
-        <div class="city-scene">
-          ${cityIsoGridHtml(city)}
+      <div class="panel pomo-stats-card">
+        <h3>${Icon("barChart", { size: 16 })}<span>Seu progresso</span></h3>
+        <div class="pomo-stat-row"><span>${Icon("checkPlain", { size: 13 })}Sessões hoje</span><b>${sessionsToday(sessions)}</b></div>
+        <div class="pomo-stat-row"><span>${Icon("flame", { size: 13 })}Sessões no total</span><b>${sessions.length}</b></div>
+        <div class="pomo-stat-row"><span>${Icon("clock", { size: 13 })}Minutos focados</span><b>${totalMinutes}</b></div>
+        <div class="pomo-stat-row"><span>${Icon("trendingUp", { size: 13 })}Sequência</span><b>${streak} dia${streak === 1 ? "" : "s"}</b></div>
+        <div class="pomo-cycle-hint">
+          <span>Ciclo atual</span>
+          ${cycleDotsHtml(state.cycleCount)}
         </div>
       </div>
     </div>
@@ -316,42 +175,54 @@ function focusStageHtml(state) {
     return `
       <div class="focus-setup">
         <div class="focus-setup-field">
-          <label>Tempo de estudo</label>
+          <label>Tempo de foco</label>
           <div class="focus-presets" data-presets="study">
             ${STUDY_PRESETS.map((m) => `<button type="button" class="btn btn-sm ${state.studyMinutes === m ? "btn-primary" : "btn-ghost"}" data-study-min="${m}">${m} min</button>`).join("")}
             <input type="number" id="study-min-custom" min="1" max="180" value="${state.studyMinutes}" />
           </div>
         </div>
         <div class="focus-setup-field">
-          <label>Tempo de pausa</label>
+          <label>Pausa curta</label>
           <div class="focus-presets" data-presets="break">
             ${BREAK_PRESETS.map((m) => `<button type="button" class="btn btn-sm ${state.breakMinutes === m ? "btn-primary" : "btn-ghost"}" data-break-min="${m}">${m} min</button>`).join("")}
             <input type="number" id="break-min-custom" min="1" max="60" value="${state.breakMinutes}" />
           </div>
         </div>
-        <button class="btn btn-primary" id="focus-start" style="margin-top:6px;">${Icon("flame", { size: 15 })}<span>Iniciar sessão de foco</span></button>
+        <div class="focus-setup-field">
+          <label>Pausa longa (a cada ${CYCLES_PER_ROUND} blocos)</label>
+          <div class="focus-presets" data-presets="long-break">
+            ${LONG_BREAK_PRESETS.map((m) => `<button type="button" class="btn btn-sm ${state.longBreakMinutes === m ? "btn-primary" : "btn-ghost"}" data-long-break-min="${m}">${m} min</button>`).join("")}
+            <input type="number" id="long-break-min-custom" min="1" max="90" value="${state.longBreakMinutes}" />
+          </div>
+        </div>
+        ${cycleDotsHtml(state.cycleCount)}
+        <button class="btn btn-primary" id="focus-start" style="margin-top:6px;">${Icon("flame", { size: 15 })}<span>Iniciar bloco de foco</span></button>
       </div>`;
   }
 
   if (state.phase === "study") {
-    const cityCount = (store.state.city || []).length;
+    const totalMs = state.studyMinutes * 60000;
     if (!state.phrase) state.phrase = randomFocusPhrase();
     return `
       <div class="focus-running">
-        <div class="focus-phase-label">Erguendo prédio...</div>
-        <div class="focus-countdown focus-countdown--sm" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
-        ${constructionSceneHtml(cityCount)}
-        <div class="focus-progress-track"><div class="focus-progress-fill" id="foco-progress-fill"></div></div>
+        <div class="focus-phase-label">Foco · bloco ${state.cycleCount + 1} de ${CYCLES_PER_ROUND}</div>
+        <div class="focus-ring-wrap">
+          <svg class="focus-ring" viewBox="0 0 120 120">
+            <circle class="focus-ring-bg" cx="60" cy="60" r="52"></circle>
+            <circle class="focus-ring-fg" id="foco-ring-fg" cx="60" cy="60" r="52" data-total-ms="${totalMs}"></circle>
+          </svg>
+          <div class="focus-countdown" id="foco-countdown">${formatMMSS(state.endsAt - Date.now())}</div>
+        </div>
         <div class="focus-phrase">${Icon("lightbulb", { size: 13 })}<span>${state.phrase}</span></div>
         <button class="btn btn-ghost" id="focus-cancel">${Icon("x", { size: 14 })}<span>Cancelar sessão</span></button>
       </div>`;
   }
 
   if (state.phase === "break") {
-    const totalMs = state.breakMinutes * 60000;
+    const totalMs = (state.isLongBreak ? state.longBreakMinutes : state.breakMinutes) * 60000;
     return `
       <div class="focus-running">
-        <div class="focus-phase-label is-break">Pausa · obra parada</div>
+        <div class="focus-phase-label is-break">${state.isLongBreak ? "Pausa longa" : "Pausa curta"}</div>
         <div class="focus-ring-wrap is-break">
           <svg class="focus-ring" viewBox="0 0 120 120">
             <circle class="focus-ring-bg" cx="60" cy="60" r="52"></circle>
@@ -364,18 +235,16 @@ function focusStageHtml(state) {
   }
 
   // study-done
-  const { svg } = isoBuildingSvg(buildingTierIndex(Math.max(0, (store.state.city || []).length - 1)), 1.8);
+  const nextIsLongBreak = state.cycleCount % CYCLES_PER_ROUND === 0;
+  const nextBreakMinutes = nextIsLongBreak ? state.longBreakMinutes : state.breakMinutes;
   return `
     <div class="focus-done">
-      <div class="focus-done-house">
-        <div class="confetti">${Array.from({ length: 10 }, (_, i) => `<span class="confetti-piece c${i % 5}"></span>`).join("")}</div>
-        ${svg}
-      </div>
-      <h3>Prédio erguido!</h3>
-      <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. Quer fazer uma pausa de ${state.breakMinutes} min?</p>
+      <div class="focus-done-icon">${Icon("checkPlain", { size: 30 })}</div>
+      <h3>Bloco concluído!</h3>
+      <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. ${nextIsLongBreak ? `Já são ${CYCLES_PER_ROUND} blocos — hora de uma pausa longa.` : `Quer fazer uma pausa de ${nextBreakMinutes} min?`}</p>
       <div class="btn-row" style="justify-content:center;">
         <button class="btn btn-ghost" id="focus-skip-break">Pular pausa</button>
-        <button class="btn btn-primary" id="focus-start-break">${Icon("flame", { size: 14 })}<span>Iniciar pausa</span></button>
+        <button class="btn btn-primary" id="focus-start-break">${Icon("flame", { size: 14 })}<span>Iniciar pausa${nextIsLongBreak ? " longa" : ""}</span></button>
       </div>
     </div>`;
 }
@@ -398,12 +267,23 @@ function wireStage(container, state) {
         renderFoco(container);
       });
     });
+    container.querySelectorAll("[data-long-break-min]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.longBreakMinutes = Number(btn.dataset.longBreakMin);
+        saveFocoState();
+        renderFoco(container);
+      });
+    });
     container.querySelector("#study-min-custom").addEventListener("change", (e) => {
       state.studyMinutes = Math.max(1, Math.min(180, Number(e.target.value) || 25));
       saveFocoState();
     });
     container.querySelector("#break-min-custom").addEventListener("change", (e) => {
       state.breakMinutes = Math.max(1, Math.min(60, Number(e.target.value) || 5));
+      saveFocoState();
+    });
+    container.querySelector("#long-break-min-custom").addEventListener("change", (e) => {
+      state.longBreakMinutes = Math.max(1, Math.min(90, Number(e.target.value) || 20));
       saveFocoState();
     });
     container.querySelector("#focus-start").addEventListener("click", () => {
@@ -418,7 +298,7 @@ function wireStage(container, state) {
 
   if (state.phase === "study") {
     container.querySelector("#focus-cancel").addEventListener("click", () => {
-      if (!confirm("Se cancelar agora, o prédio não vai ser erguido. Cancelar mesmo assim?")) return;
+      if (!confirm("Se cancelar agora, esse bloco não vai contar. Cancelar mesmo assim?")) return;
       state.phase = "idle";
       state.endsAt = null;
       saveFocoState();
@@ -448,7 +328,7 @@ function wireStage(container, state) {
     });
     container.querySelector("#focus-start-break").addEventListener("click", () => {
       state.phase = "break";
-      state.endsAt = Date.now() + state.breakMinutes * 60000;
+      state.endsAt = Date.now() + (state.isLongBreak ? state.longBreakMinutes : state.breakMinutes) * 60000;
       saveFocoState();
       renderFoco(container);
     });
@@ -456,7 +336,6 @@ function wireStage(container, state) {
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
-const BUILDING_TOP_Y = 92; // y do chão no viewBox da cena de construção
 
 function updateRing(container, remaining, totalMs) {
   const ring = container.querySelector("#foco-ring-fg");
@@ -466,25 +345,9 @@ function updateRing(container, remaining, totalMs) {
   ring.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - fraction)}`;
 }
 
-// Faz o prédio "subir" do chão conforme o tempo de estudo passa — a régua de
-// progresso embaixo também cresce junto, então dá pra sentir o avanço de
-// duas formas ao mesmo tempo (visual principal + barrinha).
-function updateConstruction(container, remaining, totalMs) {
-  const clipRect = container.querySelector("#foco-clip-rect");
-  const bar = container.querySelector("#foco-progress-fill");
-  const fractionDone = totalMs > 0 ? Math.max(0, Math.min(1, 1 - remaining / totalMs)) : 0;
-  const height = BUILDING_TOP_Y * fractionDone;
-  if (clipRect) {
-    clipRect.setAttribute("y", `${BUILDING_TOP_Y - height}`);
-    clipRect.setAttribute("height", `${height}`);
-  }
-  if (bar) bar.style.width = `${Math.round(fractionDone * 100)}%`;
-}
-
 function startTick(container, state) {
-  const totalMs = (state.phase === "study" ? state.studyMinutes : state.breakMinutes) * 60000;
-  if (state.phase === "study") updateConstruction(container, state.endsAt - Date.now(), totalMs);
-  else updateRing(container, state.endsAt - Date.now(), totalMs);
+  const totalMs = (state.phase === "study" ? state.studyMinutes : state.isLongBreak ? state.longBreakMinutes : state.breakMinutes) * 60000;
+  updateRing(container, state.endsAt - Date.now(), totalMs);
 
   tickHandle = setInterval(() => {
     const remaining = state.endsAt - Date.now();
@@ -492,32 +355,29 @@ function startTick(container, state) {
       clearTick();
       if (state.phase === "study") {
         const minutes = state.studyMinutes;
-        const countBefore = (store.state.city || []).length;
-        const levelBefore = cityLevelInfo(countBefore).current.label;
+        state.cycleCount += 1;
+        state.isLongBreak = state.cycleCount % CYCLES_PER_ROUND === 0;
         state.phase = "study-done";
         state.endsAt = null;
         saveFocoState();
         playChime();
         store.addCityBuilding(minutes); // dispara store.save() -> re-renderiza a tela inteira
-        const levelAfter = cityLevelInfo(countBefore + 1).current.label;
-        if (levelAfter !== levelBefore) {
-          showToast(`Sua cidade agora é uma "${levelAfter}"!`, "landmark");
-        } else {
-          showToast("Prédio erguido! Hora da pausa.", "checkPlain");
-        }
+        showToast(state.isLongBreak ? `${CYCLES_PER_ROUND} blocos completos! Hora da pausa longa.` : "Bloco concluído! Hora da pausa.", "checkPlain");
       } else if (state.phase === "break") {
+        const wasLongBreak = state.isLongBreak;
         state.phase = "idle";
         state.endsAt = null;
+        if (wasLongBreak) state.cycleCount = 0;
+        state.isLongBreak = false;
         saveFocoState();
         playChime();
-        showToast("Pausa concluída. Pronta pra outra sessão?", "flame");
+        showToast("Pausa concluída. Pronta pra outro bloco?", "flame");
         renderFoco(container);
       }
       return;
     }
     const span = container.querySelector("#foco-countdown");
     if (span) span.textContent = formatMMSS(remaining);
-    if (state.phase === "study") updateConstruction(container, remaining, totalMs);
-    else updateRing(container, remaining, totalMs);
+    updateRing(container, remaining, totalMs);
   }, 250);
 }
