@@ -64,6 +64,8 @@ const PATHS = {
   orderedList: '<path d="M9.5 6.5h10.5"/><path d="M9.5 12h10.5"/><path d="M9.5 17.5h10.5"/><text x="2.8" y="8.6" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">1</text><text x="2.8" y="14.1" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">2</text><text x="2.8" y="19.6" font-size="6.5" fill="currentColor" stroke="none" font-family="sans-serif">3</text>',
   messageCircle: '<path d="M4 12.3a7.8 7.8 0 1 1 3.4 6.4L4 20l1.3-3.6a7.7 7.7 0 0 1-1.3-4.1z"/><path d="M8.5 11.5h7"/><path d="M8.5 14.5h4.5"/>',
   send: '<path d="M4.5 11.5 19.5 4.5 12.5 19.5 10.3 13.2z"/><path d="M10.3 13.2 15.5 8"/>',
+  sun: '<circle cx="12" cy="12" r="4.3"/><path d="M12 2.5v3"/><path d="M12 18.5v3"/><path d="M2.5 12h3"/><path d="M18.5 12h3"/><path d="M4.9 4.9l2.1 2.1"/><path d="M17 17l2.1 2.1"/><path d="M4.9 19.1l2.1-2.1"/><path d="M17 7l2.1-2.1"/>',
+  moon: '<path d="M20.2 14.3A8.5 8.5 0 1 1 9.7 3.8a7 7 0 0 0 10.5 10.5z"/>',
 };
 
 export function Icon(name, { size = 16, cls = "", strokeWidth = 1.8 } = {}) {
