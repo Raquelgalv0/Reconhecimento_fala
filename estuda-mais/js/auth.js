@@ -133,3 +133,65 @@ export function getCachedUser() {
 export function isLoggedIn() {
   return !!readSession();
 }
+
+// Dispara o e-mail de recuperação de senha do Supabase. Não revela se o
+// e-mail existe ou não na resposta — só confirma "se existir, chega um link".
+export async function requestPasswordReset(email) {
+  const redirectTo = window.location.origin + window.location.pathname;
+  const res = await authFetch(`${AUTH_URL}/recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      // sem corpo de erro utilizável — segue com mensagem genérica
+    }
+    throw new Error(friendlyAuthError(data));
+  }
+}
+
+// O link do e-mail de recuperação traz os tokens na hash da URL
+// (#access_token=...&type=recovery&...) quando a pessoa volta pro app.
+export function getRecoveryTokensFromUrl() {
+  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  if (params.get("type") !== "recovery" || !params.get("access_token")) return null;
+  return {
+    access_token: params.get("access_token"),
+    refresh_token: params.get("refresh_token"),
+    expires_in: Number(params.get("expires_in")) || 3600,
+  };
+}
+
+export function clearRecoveryHash() {
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
+
+// Define a nova senha usando o token temporário do link de recuperação e já
+// deixa a pessoa logada com uma sessão de verdade, sem precisar digitar a
+// senha nova de novo pra entrar.
+export async function completePasswordRecovery(recoveryTokens, newPassword) {
+  const res = await authFetch(`${AUTH_URL}/user`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${recoveryTokens.access_token}`,
+    },
+    body: JSON.stringify({ password: newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(friendlyAuthError(data));
+  saveSession({
+    access_token: recoveryTokens.access_token,
+    refresh_token: recoveryTokens.refresh_token,
+    expires_in: recoveryTokens.expires_in,
+    user: data,
+  });
+  return data;
+}
