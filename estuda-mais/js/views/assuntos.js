@@ -48,7 +48,7 @@ function toolbarHtml() {
     <div class="main-header">
       <div>
         <h1>Assuntos</h1>
-        <p class="sub">Organize suas pastas e cadernos — clique em um assunto pra ver o que tem dentro.</p>
+        <p class="sub">Organize suas pastas e cadernos. Clique em um assunto pra ver o que tem dentro.</p>
       </div>
       <div class="btn-row">
         <button class="btn btn-ghost" id="btn-new-caderno">${Icon("notebook", { size: 14 })}<span>Novo caderno</span></button>
@@ -132,7 +132,7 @@ function renderBrowser(container) {
     </div>
     ${
       children.length === 0
-        ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>${current ? "Nenhum bloco aqui ainda." : "Nenhum assunto ainda — crie uma pasta ou caderno pra começar."}</div>`
+        ? `<div class="empty-state"><div class="big">${Icon("folder", { size: 30 })}</div>${current ? "Nenhum bloco aqui ainda." : "Nenhum assunto ainda. Crie uma pasta ou caderno pra começar."}</div>`
         : ""
     }
   `;

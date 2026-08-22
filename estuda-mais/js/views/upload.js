@@ -414,7 +414,7 @@ function wireForm(container) {
         showToast(
           `${kindLabel} lido: ${totalPages - failedPages} de ${totalPages} ${unit} (${failedPages} não ${
             failedPages === 1 ? "pôde" : "puderam"
-          } ser lido${failedPages === 1 ? "" : "s"} — confira o texto).`,
+          } ser lido${failedPages === 1 ? "" : "s"}, confira o texto).`,
           "alertCircle"
         );
       } else {
@@ -489,7 +489,7 @@ function wireForm(container) {
     const estimatedTokens = Math.ceil(text.length / 4);
     if (estimatedTokens > MAX_SAFE_TOKENS) {
       showToast(
-        `Esse material é grande demais pra IA processar de uma vez (~${estimatedTokens.toLocaleString("pt-BR")} tokens, o limite é ~${MAX_SAFE_TOKENS.toLocaleString("pt-BR")}). Envie por partes — até ~${MAX_SAFE_CHARS.toLocaleString("pt-BR")} caracteres de cada vez (um capítulo ou seção).`,
+        `Esse material é grande demais pra IA processar de uma vez (~${estimatedTokens.toLocaleString("pt-BR")} tokens, o limite é ~${MAX_SAFE_TOKENS.toLocaleString("pt-BR")}). Envie por partes, até ~${MAX_SAFE_CHARS.toLocaleString("pt-BR")} caracteres de cada vez (um capítulo ou seção).`,
         "alertCircle"
       );
       return;
