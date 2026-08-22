@@ -255,7 +255,7 @@ function renderOnboarding() {
   appRoot.innerHTML = `
     <div class="onboarding-overlay">
       <div class="onboarding-card">
-        <h1>Bem-vinda ao HiperNotes</h1>
+        <h1>Bem-vindo(a) ao HiperNotes</h1>
         <p>O que você está estudando? Escreva com suas palavras — não precisa se encaixar numa categoria fixa, o app se adapta ao que você contar.</p>
         <div class="field">
           <input type="text" id="onboarding-study-area" placeholder="Ex.: Residência médica, Concurso do INSS, Cálculo 2, Vestibular de Medicina..." autofocus />

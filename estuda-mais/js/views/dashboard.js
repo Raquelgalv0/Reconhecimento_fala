@@ -137,7 +137,7 @@ export function renderDashboard(container) {
   const totalCards = store.state.flashcards.length;
   const dueToday = store.cardsDueToday().length;
   const decks = store.state.folders.length;
-  const greeting = profile.name ? `Olá, ${profile.name}!` : "Bem-vinda de volta";
+  const greeting = profile.name ? `Olá, ${profile.name}!` : "Bem-vindo(a) de volta";
 
   const deckLoad = store
     .flattenFolders()

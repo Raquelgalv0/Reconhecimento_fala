@@ -435,7 +435,7 @@ function startTick(container, state) {
         state.isLongBreak = false;
         saveFocoState();
         playChime();
-        showToast("Pausa concluída. Pronta pra outro bloco?", "flame");
+        showToast("Pausa concluída. Bora pra outro bloco?", "flame");
         renderFoco(container);
       }
       return;
