@@ -11,8 +11,11 @@ create table if not exists profiles (
   level text not null default '',
   daily_time_minutes int,
   onboarded boolean not null default false,
-  daily_goal int not null default 10
+  daily_goal int not null default 10,
+  exam_date date
 );
+-- Garante a coluna em bancos que já tinham a tabela criada antes desta versão.
+alter table profiles add column if not exists exam_date date;
 
 -- ---------- folders ----------
 create table if not exists folders (

@@ -749,7 +749,7 @@ function unwrapHighlight(root) {
   if (node.nodeType === 3) node = node.parentElement;
   const linkedMark = node && node.closest ? node.closest("mark.linked-fc") : null;
   if (linkedMark && root.contains(linkedMark)) {
-    showToast("Esse trecho está ligado a um flashcard — apague o flashcard para desfazer.", "alertCircle");
+    showToast("Esse trecho está ligado a um flashcard. Apague o flashcard para desfazer.", "alertCircle");
     return false;
   }
   const markEl = closestHighlightEl(root, node);
