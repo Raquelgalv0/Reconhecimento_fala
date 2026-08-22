@@ -300,7 +300,7 @@ function renderShell() {
       <button class="mobile-menu-btn" id="mobile-menu-btn" title="Menu">${Icon("menu", { size: 18 })}</button>
       <div class="notif-wrap" id="notif-wrap">
         <button class="notif-bell" id="notif-bell" title="Notificações">${Icon("bell", { size: 17 })}<span class="notif-badge" id="notif-badge" hidden></span></button>
-        <div class="notif-dropdown" id="notif-dropdown"></div>
+        <div class="notif-dropdown" id="notif-dropdown" hidden></div>
       </div>
       <main class="main" id="main"></main>
       <div id="spotify-mini-root" hidden></div>
@@ -350,7 +350,7 @@ function renderShell() {
       btn.addEventListener("click", () => {
         store.setRoute(btn.dataset.notifRoute, { activeDeckId: null, reviewing: false });
         notifOpen = false;
-        notifDropdown.classList.remove("show");
+        notifDropdown.hidden = true;
       });
     });
   };
@@ -369,12 +369,12 @@ function renderShell() {
   notifBell.addEventListener("click", (e) => {
     e.stopPropagation();
     notifOpen = !notifOpen;
-    notifDropdown.classList.toggle("show", notifOpen);
+    notifDropdown.hidden = !notifOpen;
   });
   document.addEventListener("click", (e) => {
     if (notifOpen && !e.target.closest("#notif-wrap")) {
       notifOpen = false;
-      notifDropdown.classList.remove("show");
+      notifDropdown.hidden = true;
     }
   });
 

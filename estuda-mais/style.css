@@ -264,14 +264,9 @@ input, textarea, select {
 }
 .notif-dropdown {
   position: absolute; top: 46px; right: 0; width: 300px; max-width: calc(100vw - 40px);
-  background: rgba(255, 252, 246, 0.82); backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: var(--shadow-2, var(--shadow-1)); overflow: hidden;
-  transform-origin: top right;
-  opacity: 0; transform: scale(0.94) translateY(-6px); pointer-events: none;
-  transition: opacity 0.16s ease-out, transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.notif-dropdown.show { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
 .notif-empty { padding: 18px 16px; font-size: 12.5px; color: var(--ink-faint); text-align: center; }
 .notif-item {
   display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left;
@@ -907,15 +902,13 @@ mark.hl-azul { background: #c7dcf7; }
   display: none;
   align-items: center;
   gap: 4px;
-  background: rgba(42, 32, 24, 0.88);
-  backdrop-filter: blur(16px) saturate(160%);
+  background: var(--ink);
   color: #fff;
   border-radius: 10px;
   padding: 6px;
   box-shadow: var(--shadow-2);
   z-index: 50;
   transform: translate(-50%, -100%);
-  transform-origin: bottom center;
 }
 .selection-toolbar.show { display: flex; }
 .selection-toolbar button {
@@ -1074,8 +1067,7 @@ mark.hl-azul { background: #c7dcf7; }
    para quando a pessoa navega pra outro lugar do app. */
 #spotify-mini-root { position: fixed; right: 18px; bottom: 18px; z-index: 260; width: 260px; max-width: calc(100vw - 36px); }
 .spotify-mini-bar {
-  background: rgba(255, 252, 246, 0.82); backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border); border-radius: 14px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
   box-shadow: var(--shadow-2); overflow: hidden;
 }
 .spotify-mini-toggle {
@@ -1111,11 +1103,10 @@ mark.hl-azul { background: #c7dcf7; }
 
 .ai-chat-panel {
   position: fixed; top: 74px; right: 0; bottom: 0; width: min(360px, 100vw);
-  background: rgba(255, 252, 246, 0.86); backdrop-filter: blur(24px) saturate(180%);
-  border-left: 1px solid var(--border);
+  background: var(--bg-elevated); border-left: 1px solid var(--border);
   box-shadow: -12px 0 32px rgba(20, 20, 43, 0.14);
   display: flex; flex-direction: column;
-  transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateX(100%); transition: transform 0.25s ease;
   pointer-events: auto;
 }
 .ai-chat-dock.is-open .ai-chat-panel { transform: translateX(0); }
@@ -1304,26 +1295,19 @@ mark.hl-azul { background: #c7dcf7; }
 }
 
 /* ---------- Modal ---------- */
-@keyframes overlay-materialize { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modal-materialize {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(30, 22, 15, 0.5);
   display: flex; align-items: center; justify-content: center; z-index: 100;
-  backdrop-filter: blur(4px);
-  animation: overlay-materialize 0.18s ease-out;
+  backdrop-filter: blur(2px);
 }
 .modal {
-  background: rgba(255, 252, 246, 0.92); backdrop-filter: blur(28px) saturate(180%);
+  background: var(--bg-elevated);
   border-radius: 16px;
   width: 480px; max-width: 92vw;
   max-height: 86vh;
   overflow-y: auto;
   padding: 24px 26px 22px;
   box-shadow: var(--shadow-2);
-  animation: modal-materialize 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .modal h3 { margin: 0 0 4px; font-size: 18px; }
 .modal .modal-sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; }
@@ -1357,10 +1341,9 @@ mark.hl-azul { background: #c7dcf7; }
 /* ---------- Toast ---------- */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: rgba(42, 32, 24, 0.88); backdrop-filter: blur(16px) saturate(160%);
-  color: #fff; padding: 12px 20px; border-radius: 12px;
+  background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 12px;
   font-size: 13.5px; box-shadow: var(--shadow-2); z-index: 200;
-  opacity: 0; transition: opacity 0.25s ease-out, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
   display: flex; align-items: center; gap: 8px;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1435,7 +1418,7 @@ mark.hl-azul { background: #c7dcf7; }
   .page-style--a4 { box-shadow: none !important; }
 }
 
-/* ---------- Acessibilidade: movimento, transparência, contraste ---------- */
+/* ---------- Acessibilidade: reduzir movimento ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -1449,25 +1432,8 @@ mark.hl-azul { background: #c7dcf7; }
   .village-node:active, .village-node--center:active {
     transform: none !important;
   }
-  .flip-card-inner, .sidebar, .ai-chat-panel, .toast, .notif-dropdown {
+  .flip-card-inner, .sidebar, .ai-chat-panel, .toast {
     transition: opacity 0.12s linear !important;
   }
   .flip-card-inner.flipped { transform: rotateY(180deg) !important; }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .notif-dropdown, .spotify-mini-bar, .ai-chat-panel, .modal, .toast, .selection-toolbar {
-    backdrop-filter: none !important;
-  }
-  .notif-dropdown, .spotify-mini-bar, .ai-chat-panel, .modal { background: var(--bg-elevated) !important; }
-  .toast, .selection-toolbar { background: var(--ink) !important; }
-}
-
-@media (prefers-contrast: more) {
-  .notif-dropdown, .spotify-mini-bar, .ai-chat-panel, .modal, .toast, .selection-toolbar {
-    backdrop-filter: none !important;
-    border: 1px solid var(--ink) !important;
-  }
-  .notif-dropdown, .spotify-mini-bar, .ai-chat-panel, .modal { background: var(--bg-elevated) !important; }
-  .toast, .selection-toolbar { background: var(--ink) !important; }
 }
