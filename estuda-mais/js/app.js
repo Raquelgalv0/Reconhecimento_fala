@@ -252,44 +252,29 @@ const TIME_OPTIONS = [
 // pras etiquetas de Ala na sidebar), preenchidos com calma depois — em vez
 // de pedir tudo de uma vez antes da pessoa nem ter visto o app.
 function renderOnboarding() {
-  const selectedModes = new Set();
-
-  function render() {
-    appRoot.innerHTML = `
-      <div class="onboarding-overlay">
-        <div class="onboarding-card">
-          <h1>Bem-vinda ao HiperNotes</h1>
-          <p>Escolha um ou mais objetivos. O app ajusta prioridades e relatórios para o seu caso, sem precisar de apps diferentes.</p>
-          <div id="mode-list"></div>
-          <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px; opacity:${selectedModes.size ? "1" : ".5"};" ${selectedModes.size ? "" : "disabled"}>Começar</button>
+  appRoot.innerHTML = `
+    <div class="onboarding-overlay">
+      <div class="onboarding-card">
+        <h1>Bem-vinda ao HiperNotes</h1>
+        <p>O que você está estudando? Escreva com suas palavras — não precisa se encaixar numa categoria fixa, o app se adapta ao que você contar.</p>
+        <div class="field">
+          <input type="text" id="onboarding-study-area" placeholder="Ex.: Residência médica, Concurso do INSS, Cálculo 2, Vestibular de Medicina..." autofocus />
         </div>
-      </div>`;
+        <button class="btn btn-primary" id="continue" style="width:100%; justify-content:center; margin-top:6px;">Começar</button>
+      </div>
+    </div>`;
 
-    const list = appRoot.querySelector("#mode-list");
-    const continueBtn = appRoot.querySelector("#continue");
+  const input = appRoot.querySelector("#onboarding-study-area");
+  const continueBtn = appRoot.querySelector("#continue");
 
-    MODES.forEach((m) => {
-      const card = document.createElement("div");
-      card.className = `checkbox-card${selectedModes.has(m.id) ? " selected" : ""}`;
-      card.innerHTML = `<span class="mode-icon">${Icon(m.icon, { size: 19 })}</span><div><b>${m.title}</b><span>${m.desc}</span></div>`;
-      card.addEventListener("click", () => {
-        if (selectedModes.has(m.id)) selectedModes.delete(m.id);
-        else selectedModes.add(m.id);
-        card.classList.toggle("selected");
-        continueBtn.disabled = selectedModes.size === 0;
-        continueBtn.style.opacity = selectedModes.size === 0 ? ".5" : "1";
-      });
-      list.appendChild(card);
-    });
-
-    continueBtn.addEventListener("click", () => {
-      if (selectedModes.size === 0) return;
-      store.completeOnboarding({ modes: [...selectedModes], profile: {}, materias: "" });
-      renderShell();
-    });
-  }
-
-  render();
+  const submit = () => {
+    store.completeOnboarding({ modes: [], profile: { studyArea: input.value.trim() }, materias: "" });
+    renderShell();
+  };
+  continueBtn.addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
 }
 
 function renderShell() {
