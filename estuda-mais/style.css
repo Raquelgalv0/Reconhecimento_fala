@@ -1362,6 +1362,22 @@ mark.hl-azul { background: #c7dcf7; }
 .onboarding-card p { color: var(--ink-soft); font-size: 14px; margin: 0 0 22px; }
 .onboarding-step { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 8px; }
 
+.onboarding-card--intro { text-align: center; }
+.onboarding-card--intro .onboarding-step { text-align: center; }
+.onboarding-card--intro h1 { text-wrap: balance; }
+.onboarding-card--intro .field input { text-align: left; }
+.onboarding-mascot-badge {
+  width: 96px; height: 96px; margin: 6px auto 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--accent-soft);
+  border: 1.5px dashed var(--accent);
+}
+.onboarding-bubble {
+  display: inline-block; max-width: 320px; margin: 0 auto 22px;
+  background: var(--ink); color: #fff; font-size: 12.5px; line-height: 1.5;
+  padding: 10px 16px; border-radius: 14px 14px 14px 4px;
+}
+
 .auth-error { background: var(--red-soft); color: var(--red); font-size: 12.5px; border-radius: 9px; padding: 9px 12px; margin-bottom: 14px; }
 .auth-switch { background: none; border: none; padding: 0; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; }
 .auth-foot { margin-top: 18px; text-align: center; font-size: 13px; color: var(--ink-soft); }

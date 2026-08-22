@@ -23,6 +23,7 @@ import {
 import { mountSpotifyPlayer } from "./spotify-player.js";
 import { mountAiChat } from "./ai-chat.js";
 import { MODES, MODE_TAG } from "./modes.js";
+import { Mascot } from "./mascot.js";
 
 const appRoot = document.getElementById("app");
 
@@ -67,7 +68,7 @@ function renderAuthScreen() {
   const SUBS = {
     signin: "Acesse com seu e-mail e senha.",
     signup: "Leva menos de um minuto.",
-    forgot: "Informe seu e-mail — mandamos um link pra você criar uma senha nova.",
+    forgot: "Informe seu e-mail: mandamos um link pra você criar uma senha nova.",
   };
   const SUBMIT_LABELS = { signin: "Entrar", signup: "Criar conta", forgot: "Enviar link de redefinição" };
 
@@ -254,9 +255,12 @@ const TIME_OPTIONS = [
 function renderOnboarding() {
   appRoot.innerHTML = `
     <div class="onboarding-overlay">
-      <div class="onboarding-card">
-        <h1>Bem-vindo(a) ao HiperNotes</h1>
-        <p>O que você está estudando? Escreva com suas palavras — não precisa se encaixar numa categoria fixa, o app se adapta ao que você contar.</p>
+      <div class="onboarding-card onboarding-card--intro">
+        <div class="onboarding-step">Bem-vindo(a) ao HiperNotes</div>
+        <div class="onboarding-mascot-badge">${Mascot({ size: 72 })}</div>
+        <div class="onboarding-bubble">Pode escrever com suas palavras. Eu me adapto ao que você contar.</div>
+        <h1>O que você está estudando?</h1>
+        <p>Sem categoria fixa: conta com suas palavras e o app se adapta a partir daí.</p>
         <div class="field">
           <input type="text" id="onboarding-study-area" placeholder="Ex.: Residência médica, Concurso do INSS, Cálculo 2, Vestibular de Medicina..." autofocus />
         </div>
@@ -455,7 +459,7 @@ function openModesModal() {
   openModal(
     `
     <h3>${Icon("map", { size: 16 })} Suas Alas de estudo</h3>
-    <p class="modal-sub">Marque uma ou mais — o app ajusta prioridades e relatórios pra cada uma.</p>
+    <p class="modal-sub">Marque uma ou mais: o app ajusta prioridades e relatórios pra cada uma.</p>
     <div id="modes-list"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="cancel">Cancelar</button>

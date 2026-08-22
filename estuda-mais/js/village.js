@@ -52,7 +52,7 @@ export const BUILDINGS = [
     attr: "Estratégia",
     icon: "helpCircle",
     route: "questoes",
-    blurb: "Cresce respondendo questões — acertar vale mais.",
+    blurb: "Cresce respondendo questões, acertar vale mais.",
     xp: () => {
       const attempts = store.state.questionAttempts;
       const correct = attempts.filter((a) => a.correct).length;

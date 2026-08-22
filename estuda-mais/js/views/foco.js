@@ -16,7 +16,7 @@ const CYCLES_PER_ROUND = 4; // clássico: a cada 4 sessões de foco, pausa longa
 // contra a maior distração de todas: o celular.
 const FOCUS_PHRASES = [
   "Não vá se distrair no celular.",
-  "Deixa o celular de lado — depois você confere.",
+  "Deixa o celular de lado. Depois você confere.",
   "Uma notificação pode esperar. Seu foco, não.",
   "Você já começou. Não para agora.",
   "Respira. Volta o olho pra tela. Segue firme.",
@@ -112,7 +112,7 @@ function spotifyStatusHtml() {
   }
   return `
     <div class="spotify-block spotify-block--connected">
-      <span>${Icon("music", { size: 13 })}Playlist conectada — veja o player fixo no canto da tela.</span>
+      <span>${Icon("music", { size: 13 })}Playlist conectada. Veja o player fixo no canto da tela.</span>
       <div class="spotify-block-actions">
         <button class="icon-btn-ghost" id="spotify-change" title="Trocar playlist">${Icon("pencil", { size: 12 })}</button>
         <button class="icon-btn-ghost" id="spotify-remove" title="Remover playlist">${Icon("x", { size: 12 })}</button>
@@ -164,7 +164,7 @@ function villageHtml(vs) {
     .map((b, i) => {
       const p = positions[i];
       return `
-        <button type="button" class="village-node" data-village-route="${b.route}" style="left:${p.x}%; top:${p.y}%;" title="${b.name} — nível ${b.level}. ${b.blurb}">
+        <button type="button" class="village-node" data-village-route="${b.route}" style="left:${p.x}%; top:${p.y}%;" title="${b.name}, nível ${b.level}. ${b.blurb}">
           <span class="village-hex village-hex--${b.id}">${Icon(b.icon, { size: 20 })}</span>
           <span class="village-node-level">Nv ${b.level}</span>
           <span class="village-node-name">${b.name}</span>
@@ -196,7 +196,7 @@ export function renderFoco(container) {
     <div class="main-header">
       <div>
         <h1>Foco</h1>
-        <p class="sub">Técnica Pomodoro: blocos de estudo intercalados com pausas curtas — e uma pausa longa a cada ${CYCLES_PER_ROUND} blocos.</p>
+        <p class="sub">Técnica Pomodoro: blocos de estudo intercalados com pausas curtas, e uma pausa longa a cada ${CYCLES_PER_ROUND} blocos.</p>
       </div>
       ${streak > 0 ? `<div class="focus-streak-badge">${Icon("flame", { size: 15 })}<span>${streak} dia${streak === 1 ? "" : "s"} seguido${streak === 1 ? "" : "s"}</span></div>` : ""}
     </div>
@@ -305,7 +305,7 @@ function focusStageHtml(state) {
     <div class="focus-done">
       <div class="focus-done-icon">${Icon("checkPlain", { size: 30 })}</div>
       <h3>Bloco concluído!</h3>
-      <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. ${nextIsLongBreak ? `Já são ${CYCLES_PER_ROUND} blocos — hora de uma pausa longa.` : `Quer fazer uma pausa de ${nextBreakMinutes} min?`}</p>
+      <p class="modal-sub" style="margin-bottom:16px;">Você completou ${state.studyMinutes} minutos de foco. ${nextIsLongBreak ? `Já são ${CYCLES_PER_ROUND} blocos, hora de uma pausa longa.` : `Quer fazer uma pausa de ${nextBreakMinutes} min?`}</p>
       <div class="btn-row" style="justify-content:center;">
         <button class="btn btn-ghost" id="focus-skip-break">Pular pausa</button>
         <button class="btn btn-primary" id="focus-start-break">${Icon("flame", { size: 14 })}<span>Iniciar pausa${nextIsLongBreak ? " longa" : ""}</span></button>
